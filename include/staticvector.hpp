@@ -4,71 +4,201 @@
 #include <type_traits>
 #include <cstdint>
 #include <array>
+#include <iterator>
 #include <containerstorage.hpp>
 
 namespace spr
 {
     class static_vector_trivial_base {};
     template <typename child>
-    class static_vector_non_trivial_base
+    class static_vector_non_literal_base
     {
         public:
-            static_vector_non_trivial_base() = default;
-            ~static_vector_non_trivial_base()
+            static_vector_non_literal_base() = default;
+            ~static_vector_non_literal_base()
             {
                 child* child_ptr = static_cast<child*>(this);
-                for(size_t i = 0; i < child_ptr->size(); ++i)
+                for(child::size_type i = 0; i < child_ptr->size(); ++i)
                     child_ptr->m_data[i].destroy();
             }
     };
 
-    template <typename data, size_t t_capacity>
-    class static_vector: public std::conditional_t<std::is_trivially_destructible_v<data>, static_vector_trivial_base, static_vector_non_trivial_base<static_vector<data, t_capacity>>>
+    template <typename t_data, size_t t_capacity>
+    class static_vector: public std::conditional_t<std::is_trivially_destructible_v<t_data>, static_vector_trivial_base, static_vector_non_literal_base<static_vector<t_data, t_capacity>>>
     {
-        using base_class = std::conditional_t<std::is_trivially_destructible_v<data>, static_vector_trivial_base, static_vector_non_trivial_base<static_vector<data, t_capacity>>>;
-        friend base_class::~base_class();
-
         public:
-            using value_type = data;
-            using iterator = value_type*;
-            using const_iterator = const value_type*;
+            using value_type = t_data;
             using reference = value_type&;
             using const_reference = const value_type&;
             using pointer = value_type*;
             using const_pointer = const value_type*;
+            using size_type = size_t;
+            using difference_type = std::ptrdiff_t;
 
-            static constexpr size_t capacity = t_capacity;
+        private:
+            using storage_type = container_storage<value_type>;
+            using base_class = std::conditional_t<std::is_trivially_destructible_v<value_type>, static_vector_trivial_base, static_vector_non_literal_base<static_vector<value_type, t_capacity>>>;
+            friend base_class::~base_class();
+
+        public:
+            template <typename iter_value_type>
+            struct iterator_t
+            {
+                using difference_type = std::ptrdiff_t
+                using value_type = iter_value_type;
+                using pointer = value_type*;
+                using reference = value_type&;
+                using iterator_category = std::random_access_iterator_tag;
+
+                constexpr iterator_t& operator++ ()
+                {
+                    ++target;
+                    return *this;
+                }
+
+                constexpr iterator_t operator++ (int)
+                {
+                    iterator_t tmp = *this;
+                    operator++();
+                    return tmp;
+                }
+
+                constexpr iterator_t& operator-- ()
+                {
+                    --target;
+                    return *this;
+                }
+
+                constexpr iterator_t operator-- (int)
+                {
+                    iterator_t tmp = *this;
+                    operator--();
+                    return tmp;
+                }
+
+                constexpr iterator_t& operator+=(difference_type diff)
+                {
+                    target += diff;
+                    return tmp;
+                }
+
+                constexpr iterator_t operator+(difference_type diff)
+                {
+                    iterator_t tmp = *this;
+                    tmp.target += diff;
+                    return tmp;
+                }
+
+                friend constexpr iterator_t operator+(difference_type diff, const iterator_t& iter)
+                {
+                    return iter + diff;
+                }
+
+                constexpr iterator_t& operator-=(difference_type diff)
+                {
+                    target -= diff;
+                    return tmp;
+                }
+
+                constexpr iterator_t operator-(difference_type diff)
+                {
+                    iterator_t tmp = *this;
+                    tmp.target -= diff;
+                    return tmp;
+                }
+
+                friend constexpr iterator_t operator-(difference_type diff, const iterator_t& iter)
+                {
+                    return iter - diff;
+                }
+
+                constexpr iter_value_type& operator *() const
+                {
+                    return target->get();
+                }
+
+                constexpr iter_value_type* operator->() const
+                {
+                    return &target->get();
+                }
+
+                constexpr iter_value_type& operator[](size_type index) const
+                {
+                    return (target + index)->get();
+                }
+
+                constexpr bool operator==(const iterator_t& other) const
+                {
+                    return target == other.target;
+                }
+
+                constexpr bool operator!=(const iterator_t& other) const
+                {
+                    return !(*this == other);
+                }
+
+                constexpr bool operator<(const iterator_t& other) const
+                {
+                    return target < other.target;
+                }
+
+                constexpr bool operator>(const iterator_t& other) const
+                {
+                    return target > other.target;
+                }
+
+                constexpr bool operator<=(const iterator_t& other) const
+                {
+                    return target <= other.target;
+                }
+
+                constexpr bool operator>=(const iterator_t& other) const
+                {
+                    return target >= other.target;
+                }
+
+                storage_type* target = nullptr;
+                storage_type* end = nullptr;
+            };
+
+            using iterator = iterator_t<value_type>;
+            using const_iterator = iterator_t<const value_type>;
+            using reverse_iterator = std::reverse_iterator<iterator>;
+            using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+            static constexpr size_type capacity = t_capacity;
+
             constexpr static_vector():
                 m_size(0)
             {
             }
-            constexpr static_vector(size_t size):
+            constexpr static_vector(size_type size):
                 m_size(size)
             {
-                for(size_t i = 0; i < m_size; ++i)
-                    (*this)[i] = data{};
+                for(size_type i = 0; i < m_size; ++i)
+                    (*this)[i] = value_type{};
             }
-            constexpr static_vector(size_t size, const data& data):
+            constexpr static_vector(size_type size, const value_type& data):
                 m_size(size)
             {
-                for(size_t i = 0; i < m_size; ++i)
+                for(size_type i = 0; i < m_size; ++i)
                     (*this)[i] = data;
             }
-            constexpr static_vector(std::initializer_list<data> data):
+            constexpr static_vector(std::initializer_list<value_type> data):
                 m_size(data.size())
             {
-                for(size_t i = 0; i < m_size; ++i)
+                for(size_type i = 0; i < m_size; ++i)
                     m_data[i].set(*(data.begin() + i));
             }
-            template <size_t size>
+            template <size_type size>
             constexpr static_vector(value_type const (&arr)[size]):
                 m_size(arr.size())
             {
-                for(size_t i = 0; i < size; ++i)
+                for(size_type i = 0; i < size; ++i)
                     m_data[i].set(arr[i]);
             }
             //TBI COPY/MOVE  .... LEAKS RIGHT NOW
-            constexpr void push_back(data new_entry)
+            constexpr void push_back(value_type new_entry)
             {
                 m_data[m_size] = std::move(new_entry);
                 ++m_size;
@@ -77,7 +207,7 @@ namespace spr
             template <typename ...args>
             constexpr void emplace_back(args&&... args)
             {
-                m_data[m_size] = data{std::forward<args>(args)...};
+                m_data[m_size] = value_type{std::forward<args>(args)...};
                 ++m_size;
                 //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
             }
@@ -89,31 +219,31 @@ namespace spr
             {
                 return m_size == t_capacity;
             }
-            constexpr size_t size() const
+            constexpr size_type size() const
             {
                 return m_size;
             }
-            constexpr const data& operator[](size_t index) const
+            constexpr const value_type& operator[](size_type index) const
             {
                 return m_data[index].get();
             }
-            constexpr data& operator[](size_t index)
+            constexpr value_type& operator[](size_type index)
             {
                 return m_data[index].get();
             }
-            constexpr const data& front() const
+            constexpr const value_type& front() const
             {
                 return m_data[0].get();
             }
-            constexpr data& front()
+            constexpr value_type& front()
             {
                 return m_data[0].get();
             }
-            constexpr const data& back() const
+            constexpr const value_type& back() const
             {
                 return m_data[m_size - 1].get();
             }
-            constexpr data& back()
+            constexpr value_type& back()
             {
                 return m_data[m_size - 1].get();
             }
@@ -133,15 +263,15 @@ namespace spr
             {
                 return begin() + m_size;
             }
-            constexpr iterator erase(const data* position)
+            constexpr iterator erase(const value_type* position)
             {
-                size_t index = position - begin();
+                size_type index = position - begin();
 
                 //ASSERT(index < m_size, "trying to erase out of bounds or with bad iterator. iter: " << position << " index: " << index << "\n");
 
-                (*this)[index].~data();
+                (*this)[index].~value_type();
 
-                for(size_t i = index; i < m_size - 1; ++i)
+                for(size_type i = index; i < m_size - 1; ++i)
                 {
                     (*this)[i] = std::move((*this)[i + 1]);
                 }
@@ -158,12 +288,12 @@ namespace spr
             {
                 //ASSERT(m_size > 0, "trying to pop_back an empty static vector");
 
-                (*this)[m_size - 1].~data();
+                (*this)[m_size - 1].~value_type();
                 --m_size;
             }
-            constexpr iterator insert(const_iterator position, data value)
+            constexpr iterator insert(const_iterator position, value_type value)
             {
-                size_t target_index = position - begin();
+                size_type target_index = position - begin();
 
                 //ASSERT(target_index <= m_size, "trying to insert out of bounds or with bad iterator. iter: " << position << " index: " << target_index << "\n");
 
@@ -171,7 +301,7 @@ namespace spr
                 {
                     for(int64_t i = static_cast<int64_t>(m_size) - 1; i >= static_cast<int64_t>(target_index); --i)
                     {
-                        (*this)[static_cast<size_t>(i + 1)] = std::move((*this)[static_cast<size_t>(i)]);
+                        (*this)[static_cast<size_type>(i + 1)] = std::move((*this)[static_cast<size_type>(i)]);
                     }
                 }
 
@@ -180,28 +310,27 @@ namespace spr
                 ++m_size;
                 return &(*this)[target_index];
             }
-            constexpr void resize(size_t new_size)
+            constexpr void resize(size_type new_size)
             {
                 if(new_size < m_size)
                 {
-                    size_t first_erase = new_size;
+                    size_type first_erase = new_size;
 
-                    for(size_t i = first_erase; i < m_size; ++i)
-                        (*this)[i].~data();
+                    for(size_type i = first_erase; i < m_size; ++i)
+                        (*this)[i].~value_type();
                 }
 
                 m_size = new_size;
             }
         private:
-            using storage_type = container_storage<value_type>;
             std::array<storage_type, t_capacity> m_data;
-            size_t m_size;
+            size_type m_size;
     };
 
-    template<typename data, size_t t_capacity>
-    constexpr typename static_vector<data, t_capacity>::iterator erase_by_value(static_vector<data, t_capacity>& vec, const data& to_erase)
+    template<typename t_value_type, size_type t_capacity>
+    constexpr typename static_vector<t_value_type, t_capacity>::iterator erase_by_value(static_vector<t_value_type, t_capacity>& vec, const t_value_type& to_erase)
     {
-        for(size_t i = 0; i < vec.size(); ++i)
+        for(size_type i = 0; i < vec.size(); ++i)
         {
             if(vec[i] == to_erase)
                 return vec.erase(vec.begin() + i);
