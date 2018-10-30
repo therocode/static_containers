@@ -5,26 +5,29 @@
 
 namespace stc
 {
-template <typename key_type, typename data_type, size_t capacity>
+template <typename t_key_type, typename t_mapped_type, size_t t_capacity>
 class static_map
 {
     public:
+        using key_type = t_key_type;
+        using mapped_type = t_mapped_type;
+
         struct pair
         {
             key_type first;
-            data_type second;
+            mapped_type second;
         };
 
-        using concrete_type = static_map<key_type, data_type, capacity>;
+
+        using size_type = size_t;
         using value_type = pair;
         using reference = value_type&;
         using const_reference = const value_type&;
         using pointer = value_type*;
         using const_pointer = const value_type*;
-
-        using key_type = key_type;
-        using mapped_type = data_type;
+        static constexpr size_type capacity = t_capacity;
     private:
+        using concrete_type = static_map<key_type, mapped_type, capacity>;
         using slot_type = optional_container_storage<value_type>;
     public:
 
@@ -103,7 +106,7 @@ class static_map
             }
         }
 
-        constexpr data_type& operator[] (key_type key)
+        constexpr mapped_type& operator[] (key_type key)
         {
             iterator existing = find(key);
 
@@ -122,24 +125,24 @@ class static_map
                 }
 
                 slot_type& slot = m_storage[target];
-                slot = slot_type{{key, data_type{}}};
+                slot = slot_type{{key, mapped_type{}}};
                 ++m_size;
 
                 return slot.get().second;
             }
         }
 
-        constexpr const data_type& operator[] (const key_type& key) const
+        constexpr const mapped_type& operator[] (const key_type& key) const
         {
             return const_cast<concrete_type&>(*this)[key];
         }
 
-        constexpr data_type& at(const key_type& key)
+        constexpr mapped_type& at(const key_type& key)
         {
-            return const_cast<data_type&>(const_cast<const concrete_type&>(*this).at(key));
+            return const_cast<mapped_type&>(const_cast<const concrete_type&>(*this).at(key));
         }
 
-        constexpr const data_type& at(const key_type& key) const
+        constexpr const mapped_type& at(const key_type& key) const
         {
             const_iterator found = find(key);
             return found->second;
@@ -207,11 +210,6 @@ class static_map
         constexpr bool empty() const
         {
             return m_size == 0;
-        }
-
-        constexpr size_t capacity() const
-        {
-            return m_storage.size();
         }
 
         constexpr bool full() const
