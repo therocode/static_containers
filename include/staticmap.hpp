@@ -3,7 +3,7 @@
 #include <array>
 #include <containerstorage.hpp>
 
-namespace spr
+namespace stc
 {
 template <typename key_type, typename data_type, size_t capacity>
 class static_map
@@ -278,6 +278,6 @@ class static_map
 template<typename key_type, typename value_type, size_t capacity>
 constexpr auto make_static_map(typename static_map<key_type, value_type, capacity>::value_type const (&arr)[capacity])
 {
-    return spr::static_map<key_type, value_type, capacity>{arr};
+    return stc::static_map<key_type, value_type, capacity>{arr};
 }
 }

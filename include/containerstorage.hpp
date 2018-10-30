@@ -2,7 +2,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace spr
+namespace stc
 {
 
     template <typename value_type>

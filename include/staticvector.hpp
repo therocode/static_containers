@@ -7,7 +7,7 @@
 #include <iterator>
 #include <containerstorage.hpp>
 
-namespace spr
+namespace stc
 {
     class static_vector_trivial_base {};
     template <typename child>
