@@ -60,10 +60,10 @@ namespace stc
         private:
             using storage_type = container_storage<value_type>;
             using base_class = std::conditional_t<std::is_trivially_destructible_v<value_type>, static_vector_trivial_base, static_vector_non_literal_base<static_vector<value_type, t_capacity>>>;
-            friend base_class::~base_class();
+            friend base_class;
 
         public:
-            template <typename iter_value_type>
+            template <typename iter_value_type, typename iter_storage_type>
             struct iterator_t
             {
                 using difference_type = std::ptrdiff_t;
@@ -101,7 +101,7 @@ namespace stc
                 constexpr iterator_t& operator+=(difference_type diff)
                 {
                     target += diff;
-                    return tmp;
+                    return *this;
                 }
 
                 constexpr iterator_t operator+(difference_type diff)
@@ -119,7 +119,12 @@ namespace stc
                 constexpr iterator_t& operator-=(difference_type diff)
                 {
                     target -= diff;
-                    return tmp;
+                    return *this;
+                }
+
+                constexpr difference_type operator-(iterator_t  iter) const
+                {
+                    return target - iter.target;
                 }
 
                 constexpr iterator_t operator-(difference_type diff)
@@ -179,12 +184,17 @@ namespace stc
                     return target >= other.target;
                 }
 
-                storage_type* target = nullptr;
-                storage_type* end = nullptr;
+                template<typename U = iter_value_type, typename = typename std::enable_if_t<!std::is_const_v<U>>>
+                constexpr operator iterator_t<const U, const iter_storage_type>()
+                {
+                    return {target};
+                }
+
+                iter_storage_type* target = nullptr;
             };
 
-            using iterator = iterator_t<value_type>;
-            using const_iterator = iterator_t<const value_type>;
+            using iterator = iterator_t<value_type, storage_type>;
+            using const_iterator = iterator_t<const value_type, const storage_type>;
             using reverse_iterator = std::reverse_iterator<iterator>;
             using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -194,7 +204,7 @@ namespace stc
                 m_size(0)
             {
             }
-            constexpr static_vector(const static_vector& other)
+            constexpr static_vector(const static_vector& other): m_size(0)
             {
                 for(const_reference item : other)
                     emplace_back(item);
@@ -206,7 +216,7 @@ namespace stc
                 for(const_reference item : other)
                     emplace_back(item);
 
-                return this;
+                return *this;
             }
             constexpr static_vector(size_type size):
                 m_size(size)
@@ -224,25 +234,25 @@ namespace stc
                 m_size(data.size())
             {
                 for(size_type i = 0; i < m_size; ++i)
-                    m_data[i].set(*(data.begin() + i));
+                    m_storage[i].set(*(data.begin() + i));
             }
             template <size_type size>
             constexpr static_vector(value_type (&&arr)[size]):
                 m_size(arr.size())
             {
                 for(size_type i = 0; i < size; ++i)
-                    m_data[i].set(std::forward<value_type>(arr[i]));
+                    m_storage[i].set(std::forward<value_type>(arr[i]));
             }
             constexpr void push_back(value_type new_entry)
             {
-                m_data[m_size] = std::move(new_entry);
+                m_storage[m_size] = std::move(new_entry);
                 ++m_size;
                 //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
             }
-            template <typename ...args>
-            constexpr void emplace_back(args&&... args)
+            template <typename ...t_args>
+            constexpr void emplace_back(t_args&&... args)
             {
-                m_data[m_size] = value_type{std::forward<args>(args)...};
+                m_storage[m_size] = value_type{std::forward<t_args>(args)...};
                 ++m_size;
                 //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
             }
@@ -260,35 +270,35 @@ namespace stc
             }
             constexpr const value_type& operator[](size_type index) const
             {
-                return m_data[index].get();
+                return m_storage[index].get();
             }
             constexpr value_type& operator[](size_type index)
             {
-                return m_data[index].get();
+                return m_storage[index].get();
             }
             constexpr const value_type& front() const
             {
-                return m_data[0].get();
+                return m_storage[0].get();
             }
             constexpr value_type& front()
             {
-                return m_data[0].get();
+                return m_storage[0].get();
             }
             constexpr const value_type& back() const
             {
-                return m_data[m_size - 1].get();
+                return m_storage[m_size - 1].get();
             }
             constexpr value_type& back()
             {
-                return m_data[m_size - 1].get();
+                return m_storage[m_size - 1].get();
             }
             constexpr const_iterator begin() const
             {
-                return &front();
+                return const_iterator{m_storage.data()};
             }
             constexpr iterator begin()
             {
-                return &front();
+                return iterator{m_storage.data()};
             }
             constexpr const_iterator end() const
             {
@@ -304,7 +314,7 @@ namespace stc
 
                 //ASSERT(index < m_size, "trying to erase out of bounds or with bad iterator. iter: " << position << " index: " << index << "\n");
 
-                (*this)[index].destroy();
+                m_storage[index].destroy();
 
                 for(size_type i = index; i < m_size - 1; ++i)
                 {
@@ -313,18 +323,18 @@ namespace stc
 
                 --m_size;
 
-                return &(*this)[index];
+                return begin() + index;
             }
             constexpr void clear()
             {
                 destroy();
-                mSize = 0;
+                m_size = 0;
             }
             constexpr void pop_back()
             {
                 //ASSERT(m_size > 0, "trying to pop_back an empty static vector");
 
-                (*this)[m_size - 1].destroy();
+                m_storage[m_size - 1].destroy();
                 --m_size;
             }
             constexpr iterator insert(const_iterator position, value_type value)
@@ -359,25 +369,13 @@ namespace stc
                 m_size = new_size;
             }
         private:
-            void destroy()
+            constexpr void destroy()
             {
-                size_type size = size();
-                for(size_type i = 0; i < size; ++i)
+                size_type s = size();
+                for(size_type i = 0; i < s; ++i)
                     m_storage[i].destroy();
             }
-            std::array<storage_type, t_capacity> m_data;
+            std::array<storage_type, t_capacity> m_storage;
             size_type m_size;
     };
-
-    template<typename t_value_type, size_type t_capacity>
-    constexpr typename static_vector<t_value_type, t_capacity>::iterator erase_by_value(static_vector<t_value_type, t_capacity>& vec, const t_value_type& to_erase)
-    {
-        for(size_type i = 0; i < vec.size(); ++i)
-        {
-            if(vec[i] == to_erase)
-                return vec.erase(vec.begin() + i);
-        }
-
-        return vec.end();
-    }
 }
