@@ -77,7 +77,7 @@ namespace spr
             template <typename ...Args>
             constexpr void emplaceBack(Args&&... args)
             {
-                mData[mSize] = Data(std::forward<Args>(args)...);
+                mData[mSize] = Data{std::forward<Args>(args)...};
                 ++mSize;
                 //ASSERT(mSize <= tCapacity, "adding entry to full static vector of size " << tCapacity << "\n");
             }
