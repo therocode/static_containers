@@ -8,28 +8,28 @@
 
 namespace spr
 {
-    class StaticVectorTrivialBase {};
-    template <typename Child>
-    class StaticVectorNonTrivialBase
+    class static_vector_trivial_base {};
+    template <typename child>
+    class static_vector_non_trivial_base
     {
         public:
-            StaticVectorNonTrivialBase() = default;
-            ~StaticVectorNonTrivialBase()
+            static_vector_non_trivial_base() = default;
+            ~static_vector_non_trivial_base()
             {
-                Child* child_ptr = static_cast<Child*>(this);
+                child* child_ptr = static_cast<child*>(this);
                 for(size_t i = 0; i < child_ptr->size(); ++i)
-                    child_ptr->mData[i].destroy();
+                    child_ptr->m_data[i].destroy();
             }
     };
 
-    template <typename Data, size_t tCapacity>
-    class StaticVector: public std::conditional_t<std::is_trivially_destructible_v<Data>, StaticVectorTrivialBase, StaticVectorNonTrivialBase<StaticVector<Data, tCapacity>>>
+    template <typename data, size_t t_capacity>
+    class static_vector: public std::conditional_t<std::is_trivially_destructible_v<data>, static_vector_trivial_base, static_vector_non_trivial_base<static_vector<data, t_capacity>>>
     {
-        using BaseClass = std::conditional_t<std::is_trivially_destructible_v<Data>, StaticVectorTrivialBase, StaticVectorNonTrivialBase<StaticVector<Data, tCapacity>>>;
-        friend BaseClass::~BaseClass();
+        using base_class = std::conditional_t<std::is_trivially_destructible_v<data>, static_vector_trivial_base, static_vector_non_trivial_base<static_vector<data, t_capacity>>>;
+        friend base_class::~base_class();
 
         public:
-            using value_type = Data;
+            using value_type = data;
             using iterator = value_type*;
             using const_iterator = const value_type*;
             using reference = value_type&;
@@ -37,85 +37,85 @@ namespace spr
             using pointer = value_type*;
             using const_pointer = const value_type*;
 
-            static constexpr size_t capacity = tCapacity;
-            constexpr StaticVector():
-                mSize(0)
+            static constexpr size_t capacity = t_capacity;
+            constexpr static_vector():
+                m_size(0)
             {
             }
-            constexpr StaticVector(size_t size):
-                mSize(size)
+            constexpr static_vector(size_t size):
+                m_size(size)
             {
-                for(size_t i = 0; i < mSize; ++i)
-                    (*this)[i] = Data{};
+                for(size_t i = 0; i < m_size; ++i)
+                    (*this)[i] = data{};
             }
-            constexpr StaticVector(size_t size, const Data& data):
-                mSize(size)
+            constexpr static_vector(size_t size, const data& data):
+                m_size(size)
             {
-                for(size_t i = 0; i < mSize; ++i)
+                for(size_t i = 0; i < m_size; ++i)
                     (*this)[i] = data;
             }
-            constexpr StaticVector(std::initializer_list<Data> data):
-                mSize(data.size())
+            constexpr static_vector(std::initializer_list<data> data):
+                m_size(data.size())
             {
-                for(size_t i = 0; i < mSize; ++i)
-                    mData[i].set(*(data.begin() + i));
+                for(size_t i = 0; i < m_size; ++i)
+                    m_data[i].set(*(data.begin() + i));
             }
             template <size_t size>
-            constexpr StaticVector(value_type const (&arr)[size]):
-                mSize(arr.size())
+            constexpr static_vector(value_type const (&arr)[size]):
+                m_size(arr.size())
             {
                 for(size_t i = 0; i < size; ++i)
-                    mData[i].set(arr[i]);
+                    m_data[i].set(arr[i]);
             }
             //TBI COPY/MOVE  .... LEAKS RIGHT NOW
-            constexpr void pushBack(Data newEntry)
+            constexpr void push_back(data new_entry)
             {
-                mData[mSize] = std::move(newEntry);
-                ++mSize;
-                //ASSERT(mSize <= tCapacity, "adding entry to full static vector of size " << tCapacity << "\n");
+                m_data[m_size] = std::move(new_entry);
+                ++m_size;
+                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
             }
-            template <typename ...Args>
-            constexpr void emplaceBack(Args&&... args)
+            template <typename ...args>
+            constexpr void emplace_back(args&&... args)
             {
-                mData[mSize] = Data{std::forward<Args>(args)...};
-                ++mSize;
-                //ASSERT(mSize <= tCapacity, "adding entry to full static vector of size " << tCapacity << "\n");
+                m_data[m_size] = data{std::forward<args>(args)...};
+                ++m_size;
+                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
             }
             constexpr bool empty() const
             {
-                return mSize == 0;
+                return m_size == 0;
             }
             constexpr bool full() const
             {
-                return mSize == tCapacity;
+                return m_size == t_capacity;
             }
             constexpr size_t size() const
             {
-                return mSize;
+                return m_size;
             }
-            constexpr const Data& operator[](size_t index) const
+            constexpr const data& operator[](size_t index) const
             {
-                return mData[index].get();
+                return m_data[index].get();
             }
-            constexpr Data& operator[](size_t index)
+            constexpr data& operator[](size_t index)
             {
-                return mData[index].get();
+                return m_data[index].get();
             }
-            constexpr const Data& front() const
+            constexpr const data& front() const
             {
-                return mData[0].get();
+                return m_data[0].get();
             }
-            constexpr Data& front()
+            constexpr data& front()
             {
-                return mData[0].get();
+                return m_data[0].get();
             }
-            constexpr const Data& back() const
+            constexpr const data& back() const
             {
-                return mData[mSize - 1].get();
+                return m_data[m_size - 1].get();
             }
-            constexpr Data& back()
+            constexpr data& back()
             {
-                return mData[mSize - 1].get();
+                return m_data[m_size - 1].get();
             }
             constexpr const_iterator begin() const
             {
@@ -127,26 +127,26 @@ namespace spr
             }
             constexpr const_iterator end() const
             {
-                return begin() + mSize;
+                return begin() + m_size;
             }
             constexpr iterator end()
             {
-                return begin() + mSize;
+                return begin() + m_size;
             }
-            constexpr iterator erase(const Data* position)
+            constexpr iterator erase(const data* position)
             {
                 size_t index = position - begin();
 
-                //ASSERT(index < mSize, "trying to erase out of bounds or with bad iterator. iter: " << position << " index: " << index << "\n");
+                //ASSERT(index < m_size, "trying to erase out of bounds or with bad iterator. iter: " << position << " index: " << index << "\n");
 
-                (*this)[index].~Data();
+                (*this)[index].~data();
 
-                for(size_t i = index; i < mSize - 1; ++i)
+                for(size_t i = index; i < m_size - 1; ++i)
                 {
                     (*this)[i] = std::move((*this)[i + 1]);
                 }
 
-                --mSize;
+                --m_size;
 
                 return &(*this)[index];
             }
@@ -154,56 +154,56 @@ namespace spr
             {
                 *this = {};
             }
-            constexpr void popBack()
+            constexpr void pop_back()
             {
-                //ASSERT(mSize > 0, "trying to popBack an empty static vector");
+                //ASSERT(m_size > 0, "trying to pop_back an empty static vector");
 
-                (*this)[mSize - 1].~Data();
-                --mSize;
+                (*this)[m_size - 1].~data();
+                --m_size;
             }
-            constexpr iterator insert(const_iterator position, Data value)
+            constexpr iterator insert(const_iterator position, data value)
             {
-                size_t targetIndex = position - begin();
+                size_t target_index = position - begin();
 
-                //ASSERT(targetIndex <= mSize, "trying to insert out of bounds or with bad iterator. iter: " << position << " index: " << targetIndex << "\n");
+                //ASSERT(target_index <= m_size, "trying to insert out of bounds or with bad iterator. iter: " << position << " index: " << target_index << "\n");
 
-                if(mSize > 0)
+                if(m_size > 0)
                 {
-                    for(int64_t i = static_cast<int64_t>(mSize) - 1; i >= static_cast<int64_t>(targetIndex); --i)
+                    for(int64_t i = static_cast<int64_t>(m_size) - 1; i >= static_cast<int64_t>(target_index); --i)
                     {
                         (*this)[static_cast<size_t>(i + 1)] = std::move((*this)[static_cast<size_t>(i)]);
                     }
                 }
 
-                (*this)[targetIndex] = std::move(value);
+                (*this)[target_index] = std::move(value);
 
-                ++mSize;
-                return &(*this)[targetIndex];
+                ++m_size;
+                return &(*this)[target_index];
             }
-            constexpr void resize(size_t newSize)
+            constexpr void resize(size_t new_size)
             {
-                if(newSize < mSize)
+                if(new_size < m_size)
                 {
-                    size_t firstErase = newSize;
+                    size_t first_erase = new_size;
 
-                    for(size_t i = firstErase; i < mSize; ++i)
-                        (*this)[i].~Data();
+                    for(size_t i = first_erase; i < m_size; ++i)
+                        (*this)[i].~data();
                 }
 
-                mSize = newSize;
+                m_size = new_size;
             }
         private:
             using storage_type = container_storage<value_type>;
-            std::array<storage_type, tCapacity> mData;
-            size_t mSize;
+            std::array<storage_type, t_capacity> m_data;
+            size_t m_size;
     };
 
-    template<typename Data, size_t tCapacity>
-    constexpr typename StaticVector<Data, tCapacity>::iterator eraseByValue(StaticVector<Data, tCapacity>& vec, const Data& toErase)
+    template<typename data, size_t t_capacity>
+    constexpr typename static_vector<data, t_capacity>::iterator erase_by_value(static_vector<data, t_capacity>& vec, const data& to_erase)
     {
         for(size_t i = 0; i < vec.size(); ++i)
         {
-            if(vec[i] == toErase)
+            if(vec[i] == to_erase)
                 return vec.erase(vec.begin() + i);
         }
 

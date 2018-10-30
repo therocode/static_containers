@@ -5,33 +5,33 @@
 
 namespace spr
 {
-template <typename KeyType, typename DataType, size_t Capacity>
-class StaticMap
+template <typename key_type, typename data_type, size_t capacity>
+class static_map
 {
     public:
         struct pair
         {
-            KeyType first;
-            DataType second;
+            key_type first;
+            data_type second;
         };
 
-        using ConcreteType = StaticMap<KeyType, DataType, Capacity>;
+        using concrete_type = static_map<key_type, data_type, capacity>;
         using value_type = pair;
         using reference = value_type&;
         using const_reference = const value_type&;
         using pointer = value_type*;
         using const_pointer = const value_type*;
 
-        using key_type = KeyType;
-        using mapped_type = DataType;
+        using key_type = key_type;
+        using mapped_type = data_type;
     private:
         using slot_type = optional_container_storage<value_type>;
     public:
 
-        template<typename ValueType>
-        struct IteratorT
+        template<typename value_type>
+        struct iterator_t
         {
-            constexpr IteratorT& operator++ ()
+            constexpr iterator_t& operator++ ()
             {
                 do
                 {
@@ -41,22 +41,22 @@ class StaticMap
                 return *this;
             }
 
-            constexpr ValueType& operator *() const
+            constexpr value_type& operator *() const
             {
                 return **target;
             }
 
-            constexpr ValueType* operator->() const
+            constexpr value_type* operator->() const
             {
                 return &target->get();
             }
 
-            constexpr bool operator==(const IteratorT& other) const
+            constexpr bool operator==(const iterator_t& other) const
             {
                 return target == other.target && end == other.end;
             }
 
-            constexpr bool operator!=(const IteratorT& other) const
+            constexpr bool operator!=(const iterator_t& other) const
             {
                 return !(*this == other);
             }
@@ -65,12 +65,12 @@ class StaticMap
             slot_type* end = nullptr;
         };
 
-        using iterator = IteratorT<value_type>;
-        using const_iterator = IteratorT<const value_type>;
+        using iterator = iterator_t<value_type>;
+        using const_iterator = iterator_t<const value_type>;
 
-        constexpr StaticMap() = default;
+        constexpr static_map() = default;
         template <size_t size>
-        constexpr StaticMap(value_type const (&arr)[size])
+        constexpr static_map(value_type const (&arr)[size])
         {
             for(const value_type& v: arr)
                 insert(v);
@@ -86,14 +86,14 @@ class StaticMap
             }
             else
             {
-                size_t target = findNextEmptySlot();
+                size_t target = find_next_empty_slot();
 
-                if(target != mStorage.size())
+                if(target != m_storage.size())
                 {
-                    slot_type& slot = mStorage[target];
+                    slot_type& slot = m_storage[target];
                     slot = slot_type{std::move(entry)};
-                    ++mSize;
-                    return {{&slot, &(*mStorage.end())}, true};
+                    ++m_size;
+                    return {{&slot, &(*m_storage.end())}, true};
                 }
                 else
                 {
@@ -103,7 +103,7 @@ class StaticMap
             }
         }
 
-        constexpr DataType& operator[] (KeyType key)
+        constexpr data_type& operator[] (key_type key)
         {
             iterator existing = find(key);
 
@@ -114,47 +114,47 @@ class StaticMap
             }
             else
             {
-                size_t target = findNextEmptySlot();
+                size_t target = find_next_empty_slot();
 
-                if(target == mStorage.size())
+                if(target == m_storage.size())
                 {
                     //full. assert?
                 }
 
-                slot_type& slot = mStorage[target];
-                slot = slot_type{{key, DataType{}}};
-                ++mSize;
+                slot_type& slot = m_storage[target];
+                slot = slot_type{{key, data_type{}}};
+                ++m_size;
 
                 return slot.get().second;
             }
         }
 
-        constexpr const DataType& operator[] (const KeyType& key) const
+        constexpr const data_type& operator[] (const key_type& key) const
         {
-            return const_cast<ConcreteType&>(*this)[key];
+            return const_cast<concrete_type&>(*this)[key];
         }
 
-        constexpr DataType& at(const KeyType& key)
+        constexpr data_type& at(const key_type& key)
         {
-            return const_cast<DataType&>(const_cast<const ConcreteType&>(*this).at(key));
+            return const_cast<data_type&>(const_cast<const concrete_type&>(*this).at(key));
         }
 
-        constexpr const DataType& at(const KeyType& key) const
+        constexpr const data_type& at(const key_type& key) const
         {
             const_iterator found = find(key);
             return found->second;
         }
 
-        constexpr iterator erase(const KeyType& key)
+        constexpr iterator erase(const key_type& key)
         {
             iterator found = find(key);
 
             if(found != end())
             {
-                size_t index = std::distance(mStorage.data(), found.target); 
+                size_t index = std::distance(m_storage.data(), found.target); 
 
-                mStorage[index] = {};
-                --mSize;
+                m_storage[index] = {};
+                --m_size;
 
                 return ++found;
             }
@@ -162,11 +162,11 @@ class StaticMap
             return found;
         }
 
-        constexpr iterator find(const KeyType& key)
+        constexpr iterator find(const key_type& key)
         {
-            iterator endIter = end();
+            iterator end_iter = end();
 
-            for(iterator iter = begin(); iter != endIter; ++iter)
+            for(iterator iter = begin(); iter != end_iter; ++iter)
             {
                 if(iter->first == key)
                 {
@@ -174,58 +174,58 @@ class StaticMap
                 }
             }
 
-            return endIter;
+            return end_iter;
         }
 
-        constexpr const_iterator find(const KeyType& key) const
+        constexpr const_iterator find(const key_type& key) const
         {
-            iterator found = const_cast<ConcreteType*>(this)->find(key);
+            iterator found = const_cast<concrete_type*>(this)->find(key);
             return const_iterator{found.target, found.end};
         }
 
-        constexpr bool contains(const KeyType& key) const
+        constexpr bool contains(const key_type& key) const
         {
             return find(key) != end();
         }
 
-        constexpr size_t count(const KeyType& key) const
+        constexpr size_t count(const key_type& key) const
         {
             return static_cast<size_t>(contains(key));
         }
 
         constexpr void clear()
         {
-            mStorage.fill({});
-            mSize = 0;
+            m_storage.fill({});
+            m_size = 0;
         }
 
         constexpr size_t size() const
         {
-            return mSize;
+            return m_size;
         }
 
         constexpr bool empty() const
         {
-            return mSize == 0;
+            return m_size == 0;
         }
 
         constexpr size_t capacity() const
         {
-            return mStorage.size();
+            return m_storage.size();
         }
 
         constexpr bool full() const
         {
-            return mSize == mStorage.size();
+            return m_size == m_storage.size();
         }
 
         constexpr iterator begin()
         {
             iterator result;
-            result.target = mStorage.end();
-            result.end = mStorage.end();
+            result.target = m_storage.end();
+            result.end = m_storage.end();
 
-            for(auto& entry : mStorage)
+            for(auto& entry : m_storage)
             {
                 if(entry.has_value)
                 {
@@ -239,45 +239,45 @@ class StaticMap
 
         constexpr const_iterator begin() const
         {
-            iterator iter = const_cast<ConcreteType*>(this)->begin();
+            iterator iter = const_cast<concrete_type*>(this)->begin();
             return const_iterator{iter.target, iter.end};
         }
 
         constexpr iterator end()
         {
             iterator result;
-            result.target = mStorage.end();
-            result.end = mStorage.end();
+            result.target = m_storage.end();
+            result.end = m_storage.end();
 
             return result;
         }
 
         constexpr const_iterator end() const
         {
-            iterator iter = const_cast<ConcreteType*>(this)->end();
+            iterator iter = const_cast<concrete_type*>(this)->end();
             return const_iterator{iter.target, iter.end};
         }
     private:
-        constexpr size_t findNextEmptySlot() const
+        constexpr size_t find_next_empty_slot() const
         {
-            for(size_t i = 0; i < mStorage.size(); ++i)
+            for(size_t i = 0; i < m_storage.size(); ++i)
             {
-                if(!mStorage[i].has_value)
+                if(!m_storage[i].has_value)
                 {
                     return i;
                 }
             }
 
-            return mStorage.size();
+            return m_storage.size();
         }
 
-        size_t mSize = 0;
-        std::array<slot_type, Capacity> mStorage;
+        size_t m_size = 0;
+        std::array<slot_type, capacity> m_storage;
 };
 
 template<typename key_type, typename value_type, size_t capacity>
-constexpr auto makeStaticMap(typename StaticMap<key_type, value_type, capacity>::value_type const (&arr)[capacity])
+constexpr auto make_static_map(typename static_map<key_type, value_type, capacity>::value_type const (&arr)[capacity])
 {
-    return spr::StaticMap<key_type, value_type, capacity>{arr};
+    return spr::static_map<key_type, value_type, capacity>{arr};
 }
 }

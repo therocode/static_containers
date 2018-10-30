@@ -8,23 +8,23 @@ namespace spr
     template <typename value_type>
     union trivial_container_storage_type
     {
-        struct Dummy{};
-        constexpr trivial_container_storage_type(): dumb{}{}
+        struct empty{};
+        constexpr trivial_container_storage_type(): uninitialized{}{}
         constexpr trivial_container_storage_type(value_type v): value(v){}
         constexpr void set(value_type v)
         {
             *this = trivial_container_storage_type{v};
         }
 
-        Dummy dumb;
+        empty uninitialized;
         value_type value;
     };
 
     template <typename value_type>
     union non_trivial_container_storage_type
     {
-        struct Dummy{};
-        non_trivial_container_storage_type(): dumb{}{}
+        struct empty{};
+        non_trivial_container_storage_type(): uninitialized{}{}
         non_trivial_container_storage_type(value_type v): value(std::move(v)){}
         ~non_trivial_container_storage_type() {}
         void set(value_type v)
@@ -32,7 +32,7 @@ namespace spr
             new (&value) value_type(std::move(v));
         }
 
-        Dummy dumb;
+        empty uninitialized;
         value_type value;
     };
 
