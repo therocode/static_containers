@@ -295,13 +295,13 @@ namespace spr
             {
                 return begin() + m_size;
             }
-            constexpr iterator erase(const value_type* position)
+            constexpr iterator erase(iterator position)
             {
                 size_type index = position - begin();
 
                 //ASSERT(index < m_size, "trying to erase out of bounds or with bad iterator. iter: " << position << " index: " << index << "\n");
 
-                (*this)[index].~value_type();
+                (*this)[index].destroy();
 
                 for(size_type i = index; i < m_size - 1; ++i)
                 {
@@ -321,7 +321,7 @@ namespace spr
             {
                 //ASSERT(m_size > 0, "trying to pop_back an empty static vector");
 
-                (*this)[m_size - 1].~value_type();
+                (*this)[m_size - 1].destroy();
                 --m_size;
             }
             constexpr iterator insert(const_iterator position, value_type value)
@@ -350,7 +350,7 @@ namespace spr
                     size_type first_erase = new_size;
 
                     for(size_type i = first_erase; i < m_size; ++i)
-                        (*this)[i].~value_type();
+                        (*this)[i].destroy();
                 }
 
                 m_size = new_size;
