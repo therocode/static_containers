@@ -6,14 +6,14 @@ namespace spr
 {
 
     template <typename value_type>
-    union trivial_container_storage_type
+    union literal_container_storage_type
     {
         struct empty{};
-        constexpr trivial_container_storage_type(): uninitialized{}{}
-        constexpr trivial_container_storage_type(value_type v): value(v){}
+        constexpr literal_container_storage_type(): uninitialized{}{}
+        constexpr literal_container_storage_type(value_type v): value(v){}
         constexpr void set(value_type v)
         {
-            *this = trivial_container_storage_type{v};
+            *this = literal_container_storage_type{v};
         }
 
         empty uninitialized;
@@ -21,12 +21,12 @@ namespace spr
     };
 
     template <typename value_type>
-    union non_trivial_container_storage_type
+    union non_literal_container_storage_type
     {
         struct empty{};
-        non_trivial_container_storage_type(): uninitialized{}{}
-        non_trivial_container_storage_type(value_type v): value(std::move(v)){}
-        ~non_trivial_container_storage_type() {}
+        non_literal_container_storage_type(): uninitialized{}{}
+        non_literal_container_storage_type(value_type v): value(std::move(v)){}
+        ~non_literal_container_storage_type() {}
         void set(value_type v)
         {
             new (&value) value_type(std::move(v));
@@ -39,10 +39,11 @@ namespace spr
     template<typename value_type>
     struct get_container_storage_type
     {
-        using type = std::conditional_t<std::is_trivially_destructible_v<value_type>, trivial_container_storage_type<value_type>, non_trivial_container_storage_type<value_type>>;
+        using type = std::conditional_t<std::is_trivially_destructible_v<value_type>, literal_container_storage_type<value_type>, non_literal_container_storage_type<value_type>>;
     };
     template<typename value_type>
     using get_container_storage_type_t = typename get_container_storage_type<value_type>::type;
+
 
     struct optional_container_storage_trivial_base
     {
