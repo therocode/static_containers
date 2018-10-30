@@ -18,8 +18,27 @@ namespace spr
             ~static_vector_non_literal_base()
             {
                 child* child_ptr = static_cast<child*>(this);
-                for(child::size_type i = 0; i < child_ptr->size(); ++i)
-                    child_ptr->m_data[i].destroy();
+                child_ptr->destroy();
+            }
+            static_vector_non_literal_base(child&& other)
+            {
+                child* child_ptr = static_cast<child*>(this);
+
+                for(child::reference item : other)
+                    child_ptr->emplace_back(std::move(item));
+
+                other.clear();
+            }
+            static_vector_non_literal_base& operator=(child&& other)
+            {
+                child_ptr->clear();
+
+                for(child::reference item : other)
+                    child_ptr->emplace_back(item);
+
+                other.clear();
+
+                return this;
             }
     };
 
@@ -172,6 +191,20 @@ namespace spr
                 m_size(0)
             {
             }
+            constexpr static_vector(const static_vector& other)
+            {
+                for(const_reference item : other)
+                    emplace_back(item);
+            }
+            constexpr static_vector& operator=(const static_vector& other)
+            {
+                clear();
+
+                for(const_reference item : other)
+                    emplace_back(item);
+
+                return this;
+            }
             constexpr static_vector(size_type size):
                 m_size(size)
             {
@@ -191,13 +224,12 @@ namespace spr
                     m_data[i].set(*(data.begin() + i));
             }
             template <size_type size>
-            constexpr static_vector(value_type const (&arr)[size]):
+            constexpr static_vector(value_type (&&arr)[size]):
                 m_size(arr.size())
             {
                 for(size_type i = 0; i < size; ++i)
-                    m_data[i].set(arr[i]);
+                    m_data[i].set(std::forward<value_type>(arr[i]));
             }
-            //TBI COPY/MOVE  .... LEAKS RIGHT NOW
             constexpr void push_back(value_type new_entry)
             {
                 m_data[m_size] = std::move(new_entry);
@@ -282,7 +314,8 @@ namespace spr
             }
             constexpr void clear()
             {
-                *this = {};
+                destroy();
+                mSize = 0;
             }
             constexpr void pop_back()
             {
@@ -323,6 +356,12 @@ namespace spr
                 m_size = new_size;
             }
         private:
+            void destroy()
+            {
+                size_type size = size();
+                for(size_type i = 0; i < size; ++i)
+                    m_storage[i].destroy();
+            }
             std::array<storage_type, t_capacity> m_data;
             size_type m_size;
     };
