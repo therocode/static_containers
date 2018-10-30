@@ -10,10 +10,26 @@ namespace stc
     {
         struct empty{};
         constexpr literal_container_storage_type(): uninitialized{}{}
-        constexpr literal_container_storage_type(value_type v): value(v){}
-        constexpr void set(value_type v)
+        constexpr literal_container_storage_type(const value_type& v): value(v){}
+        //constexpr literal_container_storage_type(const literal_container_storage_type& other): value(other.value){}
+        //constexpr literal_container_storage_type(literal_container_storage_type&& other): value(other.value){}
+        constexpr literal_container_storage_type& operator=(const literal_container_storage_type& other)
         {
-            *this = literal_container_storage_type{v};
+            //*this = literal_container_storage_type(other.value);
+            value = other.value;
+            return *this;
+        }
+        //constexpr literal_container_storage_type& operator=(literal_container_storage_type&& other)
+        //{
+        //    *this = literal_container_storage_type(std::forward<value_type>(other.value));
+        //}
+        constexpr void set(const value_type& v)
+        {
+            *this = literal_container_storage_type(v);
+        }
+        constexpr void set(value_type&& v)
+        {
+            *this = literal_container_storage_type(std::forward<value_type>(v));
         }
 
         empty uninitialized;
@@ -145,9 +161,14 @@ namespace stc
             value.value.~value_type();
         }
 
-        constexpr void set(value_type v)
+        constexpr void set(const value_type& v)
         {
-            value.set(std::move(v));
+            value.set(v);
+        }
+
+        constexpr void set(value_type&& v)
+        {
+            value.set(std::forward<value_type>(v));
         }
 
         constexpr value_type& get()

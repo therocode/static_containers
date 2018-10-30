@@ -18,22 +18,25 @@ namespace stc
             ~static_vector_non_literal_base()
             {
                 child* child_ptr = static_cast<child*>(this);
+
                 child_ptr->destroy();
             }
             static_vector_non_literal_base(child&& other)
             {
                 child* child_ptr = static_cast<child*>(this);
 
-                for(child::reference item : other)
+                for(typename child::reference item : other)
                     child_ptr->emplace_back(std::move(item));
 
                 other.clear();
             }
             static_vector_non_literal_base& operator=(child&& other)
             {
+                child* child_ptr = static_cast<child*>(this);
+
                 child_ptr->clear();
 
-                for(child::reference item : other)
+                for(typename child::reference item : other)
                     child_ptr->emplace_back(item);
 
                 other.clear();
@@ -63,7 +66,7 @@ namespace stc
             template <typename iter_value_type>
             struct iterator_t
             {
-                using difference_type = std::ptrdiff_t
+                using difference_type = std::ptrdiff_t;
                 using value_type = iter_value_type;
                 using pointer = value_type*;
                 using reference = value_type&;
