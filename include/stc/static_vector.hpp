@@ -33,26 +33,26 @@ namespace stc
                 using reference = value_type&;
                 using iterator_category = std::random_access_iterator_tag;
 
-                iterator_t& operator++ ()
+                iterator_t& operator++()
                 {
                     ++target;
                     return *this;
                 }
 
-                iterator_t operator++ (int)
+                iterator_t operator++(int)
                 {
                     iterator_t tmp = *this;
                     operator++();
                     return tmp;
                 }
 
-                iterator_t& operator-- ()
+                iterator_t& operator--()
                 {
                     --target;
                     return *this;
                 }
 
-                iterator_t operator-- (int)
+                iterator_t operator--(int)
                 {
                     iterator_t tmp = *this;
                     operator--();
@@ -100,7 +100,7 @@ namespace stc
                     return iter - diff;
                 }
 
-                iter_value_type& operator *() const
+                iter_value_type& operator*() const
                 {
                     return target->get();
                 }
@@ -201,7 +201,7 @@ namespace stc
 
                 other.clear();
 
-                return this;
+                return *this;
             }
             static_vector(size_type size):
                 m_size(size)
@@ -244,7 +244,7 @@ namespace stc
             reference emplace_back(Args&&... args)
             {
                 size_t index = m_size++;
-                m_storage[index].set(value_type{std::forward<Args>(args)...});
+                m_storage[index].set(std::forward<Args>(args)...);
                 //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
                 return m_storage[index].get();
             }
@@ -317,30 +317,30 @@ namespace stc
 
                 return begin() + index;
             }
-            iterator erase(const_iterator startIn, const_iterator endIn)
+            iterator erase(const_iterator start_in, const_iterator end_in)
             {
-                iterator start = begin() + (startIn - begin());
-                iterator end = begin() + (endIn - begin());
+                iterator erase_start = begin() + (start_in - begin());
+                iterator erase_end = begin() + (end_in - begin());
 
-                if(start == end)
-                    return start;
+                if(erase_start == erase_end)
+                    return erase_start;
 
-                size_type deletedCount = end - start;
+                size_type deletedCount = erase_end - erase_start;
 
-                for(iterator current = start; current + deletedCount != end; ++current)
+                for(iterator current = erase_start; (current + deletedCount) != end(); ++current)
                 {
                     *current = std::move(*(current + deletedCount));
                 }
-                
-                for(iterator current = end - deletedCount; current != end; ++end)
+
+                for(iterator current = erase_end - deletedCount; current != erase_end; ++erase_end)
                 {
-                    size_t index = current - start;
+                    size_t index = current - begin();
                     m_storage[index].destroy();
                 }
 
                 m_size -= deletedCount;
 
-                return start;
+                return erase_start;
             }
             void clear()
             {
@@ -380,7 +380,7 @@ namespace stc
                     size_type first_erase = new_size;
 
                     for(size_type i = first_erase; i < m_size; ++i)
-                        (*this)[i].destroy();
+                        m_storage[i].destroy();
                 }
 
                 m_size = new_size;
