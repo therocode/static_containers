@@ -34,7 +34,7 @@ class static_map
         template<typename value_type>
         struct iterator_t
         {
-            constexpr iterator_t& operator++ ()
+            iterator_t& operator++ ()
             {
                 do
                 {
@@ -44,22 +44,22 @@ class static_map
                 return *this;
             }
 
-            constexpr value_type& operator *() const
+            value_type& operator *() const
             {
                 return **target;
             }
 
-            constexpr value_type* operator->() const
+            value_type* operator->() const
             {
                 return &target->get();
             }
 
-            constexpr bool operator==(const iterator_t& other) const
+            bool operator==(const iterator_t& other) const
             {
                 return target == other.target && end == other.end;
             }
 
-            constexpr bool operator!=(const iterator_t& other) const
+            bool operator!=(const iterator_t& other) const
             {
                 return !(*this == other);
             }
@@ -71,15 +71,15 @@ class static_map
         using iterator = iterator_t<value_type>;
         using const_iterator = iterator_t<const value_type>;
 
-        constexpr static_map() = default;
+        static_map() = default;
         template <size_t size>
-        constexpr static_map(value_type const (&arr)[size])
+        static_map(value_type const (&arr)[size])
         {
             for(const value_type& v: arr)
                 insert(v);
         }
 
-        constexpr std::pair<iterator, bool> insert(value_type entry)
+        std::pair<iterator, bool> insert(value_type entry)
         {
             iterator existing = find(entry.first);
 
@@ -106,7 +106,7 @@ class static_map
             }
         }
 
-        constexpr mapped_type& operator[] (key_type key)
+        mapped_type& operator[] (key_type key)
         {
             iterator existing = find(key);
 
@@ -132,23 +132,23 @@ class static_map
             }
         }
 
-        constexpr const mapped_type& operator[] (const key_type& key) const
+        const mapped_type& operator[] (const key_type& key) const
         {
             return const_cast<concrete_type&>(*this)[key];
         }
 
-        constexpr mapped_type& at(const key_type& key)
+        mapped_type& at(const key_type& key)
         {
             return const_cast<mapped_type&>(const_cast<const concrete_type&>(*this).at(key));
         }
 
-        constexpr const mapped_type& at(const key_type& key) const
+        const mapped_type& at(const key_type& key) const
         {
             const_iterator found = find(key);
             return found->second;
         }
 
-        constexpr iterator erase(const key_type& key)
+        iterator erase(const key_type& key)
         {
             iterator found = find(key);
 
@@ -165,7 +165,7 @@ class static_map
             return found;
         }
 
-        constexpr iterator find(const key_type& key)
+        iterator find(const key_type& key)
         {
             iterator end_iter = end();
 
@@ -180,44 +180,44 @@ class static_map
             return end_iter;
         }
 
-        constexpr const_iterator find(const key_type& key) const
+        const_iterator find(const key_type& key) const
         {
             iterator found = const_cast<concrete_type*>(this)->find(key);
             return const_iterator{found.target, found.end};
         }
 
-        constexpr bool contains(const key_type& key) const
+        bool contains(const key_type& key) const
         {
             return find(key) != end();
         }
 
-        constexpr size_t count(const key_type& key) const
+        size_t count(const key_type& key) const
         {
             return static_cast<size_t>(contains(key));
         }
 
-        constexpr void clear()
+        void clear()
         {
             m_storage.fill({});
             m_size = 0;
         }
 
-        constexpr size_t size() const
+        size_t size() const
         {
             return m_size;
         }
 
-        constexpr bool empty() const
+        bool empty() const
         {
             return m_size == 0;
         }
 
-        constexpr bool full() const
+        bool full() const
         {
             return m_size == m_storage.size();
         }
 
-        constexpr iterator begin()
+        iterator begin()
         {
             iterator result;
             result.target = m_storage.end();
@@ -235,13 +235,13 @@ class static_map
             return result;
         }
 
-        constexpr const_iterator begin() const
+        const_iterator begin() const
         {
             iterator iter = const_cast<concrete_type*>(this)->begin();
             return const_iterator{iter.target, iter.end};
         }
 
-        constexpr iterator end()
+        iterator end()
         {
             iterator result;
             result.target = m_storage.end();
@@ -250,13 +250,13 @@ class static_map
             return result;
         }
 
-        constexpr const_iterator end() const
+        const_iterator end() const
         {
             iterator iter = const_cast<concrete_type*>(this)->end();
             return const_iterator{iter.target, iter.end};
         }
     private:
-        constexpr size_t find_next_empty_slot() const
+        size_t find_next_empty_slot() const
         {
             for(size_t i = 0; i < m_storage.size(); ++i)
             {
@@ -274,7 +274,7 @@ class static_map
 };
 
 template<typename key_type, typename value_type, size_t capacity>
-constexpr auto make_static_map(typename static_map<key_type, value_type, capacity>::value_type const (&arr)[capacity])
+auto make_static_map(typename static_map<key_type, value_type, capacity>::value_type const (&arr)[capacity])
 {
     return stc::static_map<key_type, value_type, capacity>{arr};
 }

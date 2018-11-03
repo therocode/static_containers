@@ -9,44 +9,8 @@
 
 namespace stc
 {
-    class static_vector_trivial_base {};
-    template <typename child>
-    class static_vector_non_literal_base
-    {
-        public:
-            static_vector_non_literal_base() = default;
-            ~static_vector_non_literal_base()
-            {
-                child* child_ptr = static_cast<child*>(this);
-
-                child_ptr->destroy();
-            }
-            static_vector_non_literal_base(child&& other)
-            {
-                child* child_ptr = static_cast<child*>(this);
-
-                for(typename child::reference item : other)
-                    child_ptr->emplace_back(std::move(item));
-
-                other.clear();
-            }
-            static_vector_non_literal_base& operator=(child&& other)
-            {
-                child* child_ptr = static_cast<child*>(this);
-
-                child_ptr->clear();
-
-                for(typename child::reference item : other)
-                    child_ptr->emplace_back(item);
-
-                other.clear();
-
-                return this;
-            }
-    };
-
     template <typename t_data, size_t t_capacity>
-    class static_vector: public std::conditional_t<std::is_trivially_destructible_v<t_data>, static_vector_trivial_base, static_vector_non_literal_base<static_vector<t_data, t_capacity>>>
+    class static_vector
     {
         public:
             using value_type = t_data;
@@ -59,9 +23,6 @@ namespace stc
 
         private:
             using storage_type = container_storage<value_type>;
-            using base_class = std::conditional_t<std::is_trivially_destructible_v<value_type>, static_vector_trivial_base, static_vector_non_literal_base<static_vector<value_type, t_capacity>>>;
-            friend base_class;
-
         public:
             template <typename iter_value_type, typename iter_storage_type>
             struct iterator_t
@@ -72,120 +33,120 @@ namespace stc
                 using reference = value_type&;
                 using iterator_category = std::random_access_iterator_tag;
 
-                constexpr iterator_t& operator++ ()
+                iterator_t& operator++ ()
                 {
                     ++target;
                     return *this;
                 }
 
-                constexpr iterator_t operator++ (int)
+                iterator_t operator++ (int)
                 {
                     iterator_t tmp = *this;
                     operator++();
                     return tmp;
                 }
 
-                constexpr iterator_t& operator-- ()
+                iterator_t& operator-- ()
                 {
                     --target;
                     return *this;
                 }
 
-                constexpr iterator_t operator-- (int)
+                iterator_t operator-- (int)
                 {
                     iterator_t tmp = *this;
                     operator--();
                     return tmp;
                 }
 
-                constexpr iterator_t& operator+=(difference_type diff)
+                iterator_t& operator+=(difference_type diff)
                 {
                     target += diff;
                     return *this;
                 }
 
-                constexpr iterator_t operator+(difference_type diff)
+                iterator_t operator+(difference_type diff)
                 {
                     iterator_t tmp = *this;
                     tmp.target += diff;
                     return tmp;
                 }
 
-                friend constexpr iterator_t operator+(difference_type diff, const iterator_t& iter)
+                friend iterator_t operator+(difference_type diff, const iterator_t& iter)
                 {
                     return iter + diff;
                 }
 
-                constexpr iterator_t& operator-=(difference_type diff)
+                iterator_t& operator-=(difference_type diff)
                 {
                     target -= diff;
                     return *this;
                 }
 
-                constexpr difference_type operator-(iterator_t  iter) const
+                difference_type operator-(iterator_t  iter) const
                 {
                     return target - iter.target;
                 }
 
-                constexpr iterator_t operator-(difference_type diff)
+                iterator_t operator-(difference_type diff)
                 {
                     iterator_t tmp = *this;
                     tmp.target -= diff;
                     return tmp;
                 }
 
-                friend constexpr iterator_t operator-(difference_type diff, const iterator_t& iter)
+                friend iterator_t operator-(difference_type diff, const iterator_t& iter)
                 {
                     return iter - diff;
                 }
 
-                constexpr iter_value_type& operator *() const
+                iter_value_type& operator *() const
                 {
                     return target->get();
                 }
 
-                constexpr iter_value_type* operator->() const
+                iter_value_type* operator->() const
                 {
                     return &target->get();
                 }
 
-                constexpr iter_value_type& operator[](size_type index) const
+                iter_value_type& operator[](size_type index) const
                 {
                     return (target + index)->get();
                 }
 
-                constexpr bool operator==(const iterator_t& other) const
+                bool operator==(const iterator_t& other) const
                 {
                     return target == other.target;
                 }
 
-                constexpr bool operator!=(const iterator_t& other) const
+                bool operator!=(const iterator_t& other) const
                 {
                     return !(*this == other);
                 }
 
-                constexpr bool operator<(const iterator_t& other) const
+                bool operator<(const iterator_t& other) const
                 {
                     return target < other.target;
                 }
 
-                constexpr bool operator>(const iterator_t& other) const
+                bool operator>(const iterator_t& other) const
                 {
                     return target > other.target;
                 }
 
-                constexpr bool operator<=(const iterator_t& other) const
+                bool operator<=(const iterator_t& other) const
                 {
                     return target <= other.target;
                 }
 
-                constexpr bool operator>=(const iterator_t& other) const
+                bool operator>=(const iterator_t& other) const
                 {
                     return target >= other.target;
                 }
 
                 template<typename U = iter_value_type, typename = typename std::enable_if_t<!std::is_const_v<U>>>
-                constexpr operator iterator_t<const U, const iter_storage_type>()
+                operator iterator_t<const U, const iter_storage_type>()
                 {
                     return {target};
                 }
@@ -198,18 +159,22 @@ namespace stc
             using reverse_iterator = std::reverse_iterator<iterator>;
             using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-            static constexpr size_type capacity = t_capacity;
+            constexpr static size_type capacity = t_capacity;
 
-            constexpr static_vector():
+            static_vector():
                 m_size(0)
             {
             }
-            constexpr static_vector(const static_vector& other): m_size(0)
+            ~static_vector()
+            {
+                destroy();
+            }
+            static_vector(const static_vector& other): m_size(0)
             {
                 for(const_reference item : other)
                     emplace_back(item);
             }
-            constexpr static_vector& operator=(const static_vector& other)
+            static_vector& operator=(const static_vector& other)
             {
                 clear();
 
@@ -218,103 +183,128 @@ namespace stc
 
                 return *this;
             }
-            constexpr static_vector(size_type size):
+            static_vector(static_vector&& other)
+            {
+                clear();
+
+                for(reference item : other)
+                    emplace_back(std::move(item));
+
+                other.clear();
+            }
+            static_vector& operator=(static_vector&& other)
+            {
+                clear();
+
+                for(reference item : other)
+                    emplace_back(std::move(item));
+
+                other.clear();
+
+                return this;
+            }
+            static_vector(size_type size):
                 m_size(size)
             {
-                for(size_type i = 0; i < m_size; ++i)
-                    (*this)[i] = value_type{};
             }
-            constexpr static_vector(size_type size, const value_type& data):
+            static_vector(size_type size, const value_type& data):
                 m_size(size)
             {
                 for(size_type i = 0; i < m_size; ++i)
                     (*this)[i] = data;
             }
-            constexpr static_vector(std::initializer_list<value_type> data):
+            static_vector(std::initializer_list<value_type> data):
                 m_size(data.size())
             {
                 for(size_type i = 0; i < m_size; ++i)
                     m_storage[i].set(*(data.begin() + i));
             }
             template <size_type size>
-            constexpr static_vector(value_type (&&arr)[size]):
+            static_vector(value_type (&&arr)[size]):
                 m_size(arr.size())
             {
                 for(size_type i = 0; i < size; ++i)
                     m_storage[i].set(std::forward<value_type>(arr[i]));
             }
-            constexpr void push_back(value_type new_entry)
+            reference push_back(const value_type& new_entry)
             {
-                m_storage[m_size] = std::move(new_entry);
-                ++m_size;
+                size_t index = m_size++;
+                m_storage[index].set(new_entry);
                 //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
+                return m_storage[index].get();
             }
-            template <typename ...t_args>
-            constexpr void emplace_back(t_args&&... args)
+            reference push_back(value_type&& new_entry)
             {
-                m_storage[m_size] = value_type{std::forward<t_args>(args)...};
-                ++m_size;
+                size_t index = m_size++;
+                m_storage[index].set(std::forward<value_type>(new_entry));
                 //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
+                return m_storage[index].get();
             }
-            constexpr bool empty() const
+            template <typename ...Args>
+            reference emplace_back(Args&&... args)
+            {
+                size_t index = m_size++;
+                m_storage[index].set(value_type{std::forward<Args>(args)...});
+                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
+                return m_storage[index].get();
+            }
+            bool empty() const
             {
                 return m_size == 0;
             }
-            constexpr bool full() const
+            bool full() const
             {
                 return m_size == t_capacity;
             }
-            constexpr size_type size() const
+            size_type size() const
             {
                 return m_size;
             }
-            constexpr const value_type& operator[](size_type index) const
+            const value_type& operator[](size_type index) const
             {
                 return m_storage[index].get();
             }
-            constexpr value_type& operator[](size_type index)
+            value_type& operator[](size_type index)
             {
                 return m_storage[index].get();
             }
-            constexpr const value_type& front() const
+            const value_type& front() const
             {
                 return m_storage[0].get();
             }
-            constexpr value_type& front()
+            value_type& front()
             {
                 return m_storage[0].get();
             }
-            constexpr const value_type& back() const
+            const value_type& back() const
             {
                 return m_storage[m_size - 1].get();
             }
-            constexpr value_type& back()
+            value_type& back()
             {
                 return m_storage[m_size - 1].get();
             }
-            constexpr const_iterator begin() const
+            const_iterator begin() const
             {
                 return const_iterator{m_storage.data()};
             }
-            constexpr iterator begin()
+            iterator begin()
             {
                 return iterator{m_storage.data()};
             }
-            constexpr const_iterator end() const
+            const_iterator end() const
             {
                 return begin() + m_size;
             }
-            constexpr iterator end()
+            iterator end()
             {
                 return begin() + m_size;
             }
-            constexpr iterator erase(iterator position)
+            iterator erase(const_iterator position)
             {
                 size_type index = position - begin();
 
                 //ASSERT(index < m_size, "trying to erase out of bounds or with bad iterator. iter: " << position << " index: " << index << "\n");
-
-                m_storage[index].destroy();
 
                 for(size_type i = index; i < m_size - 1; ++i)
                 {
@@ -323,21 +313,48 @@ namespace stc
 
                 --m_size;
 
+                m_storage[m_size].destroy();
+
                 return begin() + index;
             }
-            constexpr void clear()
+            iterator erase(const_iterator startIn, const_iterator endIn)
+            {
+                iterator start = begin() + (startIn - begin());
+                iterator end = begin() + (endIn - begin());
+
+                if(start == end)
+                    return start;
+
+                size_type deletedCount = end - start;
+
+                for(iterator current = start; current + deletedCount != end; ++current)
+                {
+                    *current = std::move(*(current + deletedCount));
+                }
+                
+                for(iterator current = end - deletedCount; current != end; ++end)
+                {
+                    size_t index = current - start;
+                    m_storage[index].destroy();
+                }
+
+                m_size -= deletedCount;
+
+                return start;
+            }
+            void clear()
             {
                 destroy();
                 m_size = 0;
             }
-            constexpr void pop_back()
+            void pop_back()
             {
                 //ASSERT(m_size > 0, "trying to pop_back an empty static vector");
 
                 m_storage[m_size - 1].destroy();
                 --m_size;
             }
-            constexpr iterator insert(const_iterator position, value_type value)
+            iterator insert(const_iterator position, value_type value)
             {
                 size_type target_index = position - begin();
 
@@ -354,9 +371,9 @@ namespace stc
                 (*this)[target_index] = std::move(value);
 
                 ++m_size;
-                return &(*this)[target_index];
+                return begin() + target_index;
             }
-            constexpr void resize(size_type new_size)
+            void resize(size_type new_size)
             {
                 if(new_size < m_size)
                 {
@@ -369,7 +386,7 @@ namespace stc
                 m_size = new_size;
             }
         private:
-            constexpr void destroy()
+            void destroy()
             {
                 size_type s = size();
                 for(size_type i = 0; i < s; ++i)

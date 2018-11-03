@@ -4,163 +4,144 @@
 
 namespace stc
 {
-
-    template <typename value_type>
-    union literal_container_storage_type
+    template <typename value_type_in>
+    struct container_storage
     {
-        struct empty{};
-        constexpr literal_container_storage_type(): uninitialized{}{}
-        constexpr literal_container_storage_type(value_type v): value(v){}
-        constexpr void set(value_type v)
+        using value_type = value_type_in;
+
+        void destroy()
         {
-            *this = literal_container_storage_type{v};
+            get().~value_type();
         }
 
-        empty uninitialized;
-        value_type value;
-    };
-
-    template <typename value_type>
-    union non_literal_container_storage_type
-    {
-        struct empty{};
-        non_literal_container_storage_type(): uninitialized{}{}
-        non_literal_container_storage_type(value_type v): value(std::move(v)){}
-        ~non_literal_container_storage_type() {}
-        void set(value_type v)
+        void set(value_type&& v)
         {
-            new (&value) value_type(std::move(v));
+            new(&m_data) value_type(std::forward<value_type>(v));
         }
 
-        empty uninitialized;
-        value_type value;
-    };
-
-    template<typename value_type>
-    struct get_container_storage_type
-    {
-        using type = std::conditional_t<std::is_trivially_destructible_v<value_type>, literal_container_storage_type<value_type>, non_literal_container_storage_type<value_type>>;
-    };
-    template<typename value_type>
-    using get_container_storage_type_t = typename get_container_storage_type<value_type>::type;
-
-
-    struct optional_container_storage_trivial_base
-    {
-    };
-
-    template <typename child_type>
-    struct optional_container_storage_non_trivial_base
-    {
-        optional_container_storage_non_trivial_base() = default;
-        ~optional_container_storage_non_trivial_base()
+        void set(const value_type& v)
         {
-            using value_type = typename child_type::value_type;
-            auto* child_ptr = static_cast<child_type*>(this);
-            if(child_ptr->has_value)
-                child_ptr->value.value.~value_type();
+            new(&m_data) value_type(v);
         }
-        optional_container_storage_non_trivial_base(optional_container_storage_non_trivial_base&& other)
+
+        template<typename ...Args>
+        void set(Args&&... args) 
         {
-            using value_type = typename child_type::value_type;
-            auto* child_ptr = static_cast<child_type*>(this);
-
-            child_ptr->has_value = other.has_value;
-
-            if(other.has_value)
-            {
-                child_ptr->value.set(std::move(other.value.value));
-                other.value.value.~value_type();
-                other.has_value = false;
-            }
+            new(&m_data) value_type(std::forward<Args>(args)...);
         }
-        optional_container_storage_non_trivial_base& operator=(optional_container_storage_non_trivial_base&& other)
+
+        value_type& get()
         {
-            using value_type = typename child_type::value_type;
-            auto* child_ptr = static_cast<child_type*>(this);
-
-            if(child_ptr->has_value)
-                child_ptr->value.value.~value_type();
-            
-            child_ptr->has_value = other.has_value;
-
-            if(other.has_value)
-            {
-                child_ptr->value.set(std::move(other.value.value));
-                other.value.value.~value_type();
-                other.has_value = false;
-            }
-
-            return *this;
+            return *std::launder(reinterpret_cast<value_type*>(&m_data));
         }
+
+        const value_type& get() const
+        {
+            return *std::launder(reinterpret_cast<const value_type*>(&m_data));
+        }
+
+        typename std::aligned_storage<sizeof(value_type), alignof(value_type)>::type m_data;
     };
 
     template <typename value_type_in>
-    struct optional_container_storage: std::conditional_t<std::is_trivially_destructible_v<value_type_in>, optional_container_storage_trivial_base, optional_container_storage_non_trivial_base<optional_container_storage<value_type_in>>>
+    struct optional_container_storage
     {
         using value_type = value_type_in;
-        constexpr optional_container_storage(): value(), has_value(false) {}
-        constexpr optional_container_storage(value_type v): value(std::move(v)), has_value(true) {}
-        constexpr optional_container_storage(const optional_container_storage& other): value(), has_value(other.has_value)
+
+        optional_container_storage(): has_value(false) {}
+        optional_container_storage(value_type&& v): has_value(true)
         {
-            if(other.has_value)
-                value.set(other.value.value);
+            value.set(std::forward<value_type>(v));
         }
-        constexpr optional_container_storage& operator=(const optional_container_storage& other)
+        optional_container_storage(const value_type& v): has_value(true)
+        {
+            value.set(v);
+        }
+        template <typename ...Args>
+        optional_container_storage(Args&&... args)
+        {
+            value.set(std::forward<Args>(args)...);
+        }
+        ~optional_container_storage()
         {
             if(has_value)
-                value.value.~value_type();
+                value.destroy();
+        }
+        optional_container_storage(const optional_container_storage& other): has_value(other.has_value)
+        {
+            if(other.has_value)
+                value.set(other.get());
+        }
+        optional_container_storage& operator=(const optional_container_storage& other)
+        {
+            if(&other == this)
+                return *this;
+
+            if(has_value)
+                value.destroy();
             
             has_value = other.has_value;
 
             if(other.has_value)
-                value.set(other.value.value);
+                value.set(other.get());
+
+            return *this;
+        }
+        optional_container_storage(optional_container_storage&& other)
+        {
+            has_value = other.has_value;
+
+            if(other.has_value)
+            {
+                value.set(std::move(other.get()));
+                other.value.destroy();
+                other.has_value = false;
+            }
+        }
+        optional_container_storage& operator=(optional_container_storage&& other)
+        {
+            if(has_value)
+                value.destroy();
+            
+            has_value = other.has_value;
+
+            if(other.has_value)
+            {
+                value.set(std::move(other.get()));
+                other.value.destroy();
+                other.has_value = false;
+            }
 
             return *this;
         }
 
-        constexpr value_type& get()
+        value_type& get()
         {
-            return value.value;
+            return value.get();
         }
 
-        const constexpr value_type& get() const
+        const value_type& get() const
         {
-            return value.value;
+            return value.get();
         }
 
-        using container_storage_type = get_container_storage_type_t<value_type>;
-        container_storage_type value;
+        void set(value_type&& v)
+        {
+            *this = optional_container_storage(std::forward<value_type>(v));
+        }
+
+        void set(const value_type& v)
+        {
+            *this = optional_container_storage(std::forward<value_type>(v));
+        }
+
+        template<typename ...Args>
+        void set(Args&&... args) 
+        {
+            *this = optional_container_storage(std::forward<Args>(args)...);
+        }
+
+        container_storage<value_type> value;
         bool has_value;
-    };
-
-    template <typename value_type>
-    struct container_storage
-    {
-        constexpr container_storage(): value() {}
-        constexpr container_storage(value_type v): value(std::move(v)) {}
-
-        constexpr void destroy()
-        {
-            value.value.~value_type();
-        }
-
-        constexpr void set(value_type v)
-        {
-            value.set(std::move(v));
-        }
-
-        constexpr value_type& get()
-        {
-            return value.value;
-        }
-
-        const constexpr value_type& get() const
-        {
-            return value.value;
-        }
-
-        using container_storage_type = get_container_storage_type_t<value_type>;
-        container_storage_type value;
     };
 }
