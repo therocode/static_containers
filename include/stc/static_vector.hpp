@@ -391,64 +391,64 @@ namespace stc
                 destroy();
                 m_size = 0;
             }
-            iterator insert(const_iterator position, value_type value)
+            iterator insert(const_iterator cposition, const value_type& value)
             {
-                size_type target_index = position - begin();
-
+                //size_type target_index = index_of(cposition);
                 //ASSERT(target_index <= m_size, "trying to insert out of bounds or with bad iterator. iter: " << position << " index: " << target_index << "\n");
+                m_storage[m_size].set(value);
 
-                if(m_size > 0)
-                {
-                    for(int64_t i = static_cast<int64_t>(m_size) - 1; i >= static_cast<int64_t>(target_index); --i)
-                    {
-                        (*this)[static_cast<size_type>(i + 1)] = std::move((*this)[static_cast<size_type>(i)]);
-                    }
-                }
-
-                (*this)[target_index] = std::move(value);
+                iterator position = non_const(cposition);
+                move_segment_up(position, end(), position + 1);
 
                 ++m_size;
-                return begin() + target_index;
+                return position;
             }
-            iterator erase(const_iterator position)
+            iterator insert(const_iterator cposition, value_type&& value)
             {
-                size_type index = position - begin();
+                //size_type target_index = index_of(position);
+                //ASSERT(target_index <= m_size, "trying to insert out of bounds or with bad iterator. iter: " << position << " index: " << target_index << "\n");
+                m_storage[m_size].set(std::forward<value_type>(value));
 
+                iterator position = non_const(cposition);
+                move_segment_up(position, end(), position + 1);
+
+                ++m_size;
+                return position;
+            }
+            iterator insert(const_iterator pos, size_type count, const value_type& value);;;;;;
+            template <typename input_iter, typename std::enable_if_t<is_input_iterator_v<input_iter>>* = nullptr>
+            iterator insert(const_iterator pos, input_iter first, input_iter last);;;;;;
+            iterator insert(const_iterator pos, std::initializer_list<value_type> ilist);;;;;;
+            template <typename... Args>
+            iterator emplace(const_iterator pos, Args&&... args);;;;;;
+            iterator erase(const_iterator cposition)
+            {
+                //size_type index = index_of(cposition);
                 //ASSERT(index < m_size, "trying to erase out of bounds or with bad iterator. iter: " << position << " index: " << index << "\n");
 
-                for(size_type i = index; i < m_size - 1; ++i)
-                {
-                    (*this)[i] = std::move((*this)[i + 1]);
-                }
-
-                --m_size;
-
-                m_storage[m_size].destroy();
-
-                return begin() + index;
+                return erase(cposition, cposition + 1);
             }
-            iterator erase(const_iterator start_in, const_iterator end_in)
+            iterator erase(const_iterator cerase_start, const_iterator cerase_end)
             {
-                iterator erase_start = begin() + (start_in - begin());
-                iterator erase_end = begin() + (end_in - begin());
+                //size_type index = index_of(cposition);
+                //ASSERT(index < m_size, "trying to erase out of bounds or with bad iterator. iter: " << position << " index: " << index << "\n");
 
-                if(erase_start == erase_end)
-                    return erase_start;
+                if(cerase_start == cerase_end)
+                    return non_const(cerase_start);
 
-                size_type deletedCount = erase_end - erase_start;
+                iterator erase_start = non_const(cerase_start);
+                iterator erase_end = non_const(cerase_end);
+                size_type erase_count = erase_end - erase_start;
 
-                for(iterator current = erase_start; (current + deletedCount) != end(); ++current)
+                move_segment_down(erase_start + erase_count, end(), erase_start);
+
+                m_size -= erase_count;
+
+                size_type storage_size = m_storage.size();
+                for(size_type i = m_size; i < storage_size; ++i)
                 {
-                    *current = std::move(*(current + deletedCount));
+                    m_storage[i].destroy();
                 }
-
-                for(iterator current = erase_end - deletedCount; current != erase_end; ++erase_end)
-                {
-                    size_t index = current - begin();
-                    m_storage[index].destroy();
-                }
-
-                m_size -= deletedCount;
 
                 return erase_start;
             }
@@ -500,6 +500,31 @@ namespace stc
                 for(size_type i = 0; i < s; ++i)
                     m_storage[i].destroy();
             }
+            size_type index_of(const_iterator iter) const
+            {
+                return iter - begin();
+            }
+            iterator non_const(const_iterator iter)
+            {
+                return begin() + index_of(iter);
+            }
+            void move_segment_down(iterator start, iterator end, iterator destination)
+            {
+                for(iterator current_source = start, current_destination = destination; current_source != end; ++current_source, ++current_destination)
+                {
+                    std::swap(*current_destination, *current_source);
+                }
+            }
+            void move_segment_up(iterator start, iterator end, iterator destination)
+            {
+                size_type count = end - start;
+                reverse_iterator rend(start);
+                for(reverse_iterator current_source = reverse_iterator{end}, current_destination = reverse_iterator{destination + count}; current_source != rend; ++current_source, ++current_destination)
+                {
+                    std::swap(*current_destination, *current_source);
+                }
+            }
+
             std::array<storage_type, t_capacity> m_storage;
             size_type m_size;
     };
