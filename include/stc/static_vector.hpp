@@ -21,9 +21,6 @@ namespace stc
             using size_type = size_t;
             using difference_type = std::ptrdiff_t;
 
-        private:
-            using storage_type = container_storage<value_type>;
-        public:
             template <typename iter_value_type, typename iter_storage_type>
             struct iterator_t
             {
@@ -154,20 +151,35 @@ namespace stc
                 iter_storage_type* target = nullptr;
             };
 
+        private:
+            using storage_type = container_storage<value_type>;
+        public:
             using iterator = iterator_t<value_type, storage_type>;
             using const_iterator = iterator_t<const value_type, const storage_type>;
             using reverse_iterator = std::reverse_iterator<iterator>;
             using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-            constexpr static size_type capacity = t_capacity;
-
+            //constructors
             static_vector():
                 m_size(0)
             {
             }
-            ~static_vector()
+            explicit static_vector(size_type size, const value_type& data):
+                m_size(size)
             {
-                destroy();
+                for(size_type i = 0; i < m_size; ++i)
+                    (*this)[i] = data;
+            }
+            explicit static_vector(size_type size):
+                m_size(size)
+            {
+            }
+            template<typename input_iter, typename std::enable_if_t<is_input_iterator_v<input_iter>>* = nullptr>
+            static_vector(input_iter start, input_iter end):
+                m_size(0)
+            {
+                for(auto current = start; current != end; ++current)
+                    push_back(*current);
             }
             static_vector(const static_vector& other): m_size(0)
             {
@@ -183,16 +195,6 @@ namespace stc
 
                 other.clear();
             }
-            explicit static_vector(size_type size):
-                m_size(size)
-            {
-            }
-            static_vector(size_type size, const value_type& data):
-                m_size(size)
-            {
-                for(size_type i = 0; i < m_size; ++i)
-                    (*this)[i] = data;
-            }
             static_vector(std::initializer_list<value_type> data):
                 m_size(data.size())
             {
@@ -206,14 +208,12 @@ namespace stc
                 for(size_type i = 0; i < size; ++i)
                     m_storage[i].set(std::forward<value_type>(arr[i]));
             }
-
-            template<typename input_iter, typename std::enable_if_t<is_input_iterator_v<input_iter>>* = nullptr>
-            static_vector(input_iter start, input_iter end):
-                m_size(0)
+            //destructor
+            ~static_vector()
             {
-                for(auto current = start; current != end; ++current)
-                    push_back(*current);
+                destroy();
             }
+            //assignment
             static_vector& operator=(const static_vector& other)
             {
                 clear();
@@ -245,6 +245,7 @@ namespace stc
 
                 return *this;
             }
+            //assign
             void assign(size_type count, const value_type& value)
             {
                 destroy();
@@ -271,6 +272,7 @@ namespace stc
                 for(size_type i = 0; i < m_size; ++i)
                     m_storage[i].set(*(data.begin() + i));
             }
+            //element access
             reference at(size_type index)
             {
                 //bounds checking tbi
@@ -281,6 +283,30 @@ namespace stc
                 //bounds checking tbi
                 return (*this)[index];
             }
+            reference operator[](size_type index)
+            {
+                return m_storage[index].get();
+            }
+            const_reference operator[](size_type index) const
+            {
+                return m_storage[index].get();
+            }
+            reference front()
+            {
+                return m_storage[0].get();
+            }
+            const_reference front() const
+            {
+                return m_storage[0].get();
+            }
+            reference back()
+            {
+                return m_storage[m_size - 1].get();
+            }
+            const_reference back() const
+            {
+                return m_storage[m_size - 1].get();
+            }
             value_type* data() noexcept
             {
                 return &(*this)[0];
@@ -289,81 +315,24 @@ namespace stc
             {
                 return &(*this)[0];
             }
-            reference push_back(const value_type& new_entry)
+            //iterators
+            iterator begin()
             {
-                size_t index = m_size++;
-                m_storage[index].set(new_entry);
-                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
-                return m_storage[index].get();
-            }
-            reference push_back(value_type&& new_entry)
-            {
-                size_t index = m_size++;
-                m_storage[index].set(std::forward<value_type>(new_entry));
-                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
-                return m_storage[index].get();
-            }
-            template <typename ...Args>
-            reference emplace_back(Args&&... args)
-            {
-                size_t index = m_size++;
-                m_storage[index].set(std::forward<Args>(args)...);
-                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
-                return m_storage[index].get();
-            }
-            bool empty() const
-            {
-                return m_size == 0;
-            }
-            bool full() const
-            {
-                return m_size == t_capacity;
-            }
-            size_type size() const
-            {
-                return m_size;
-            }
-            const value_type& operator[](size_type index) const
-            {
-                return m_storage[index].get();
-            }
-            value_type& operator[](size_type index)
-            {
-                return m_storage[index].get();
-            }
-            const value_type& front() const
-            {
-                return m_storage[0].get();
-            }
-            value_type& front()
-            {
-                return m_storage[0].get();
-            }
-            const value_type& back() const
-            {
-                return m_storage[m_size - 1].get();
-            }
-            value_type& back()
-            {
-                return m_storage[m_size - 1].get();
+                return iterator{m_storage.data()};
             }
             const_iterator begin() const
             {
                 return const_iterator{m_storage.data()};
             }
-            iterator begin()
-            {
-                return iterator{m_storage.data()};
-            }
             const_iterator cbegin() const
             {
                 return const_iterator{m_storage.data()};
             }
-            const_iterator end() const
+            iterator end()
             {
                 return begin() + m_size;
             }
-            iterator end()
+            const_iterator end() const
             {
                 return begin() + m_size;
             }
@@ -371,9 +340,75 @@ namespace stc
             {
                 return begin() + m_size;
             }
+            reverse_iterator rbegin()
+            {
+                return reverse_iterator{end()};
+            }
+            const_reverse_iterator rbegin() const
+            {
+                return const_reverse_iterator{end()};
+            }
+            const_reverse_iterator crbegin() const
+            {
+                return const_reverse_iterator{end()};
+            }
+            reverse_iterator rend()
+            {
+                return reverse_iterator{begin()};
+            }
+            const_reverse_iterator rend() const
+            {
+                return const_reverse_iterator{begin()};
+            }
+            const_reverse_iterator crend() const
+            {
+                return const_reverse_iterator{begin()};
+            }
+            //capacity
+            bool empty() const
+            {
+                return m_size == 0;
+            }
+            size_type size() const
+            {
+                return m_size;
+            }
             constexpr size_type max_size() const
             {
                 return static_cast<size_type>(-1) / sizeof(value_type);
+            }
+            constexpr static size_type capacity()
+            {
+                return t_capacity;
+            }
+            bool full() const
+            {
+                return m_size == t_capacity;
+            }
+            //modifiers
+            void clear()
+            {
+                destroy();
+                m_size = 0;
+            }
+            iterator insert(const_iterator position, value_type value)
+            {
+                size_type target_index = position - begin();
+
+                //ASSERT(target_index <= m_size, "trying to insert out of bounds or with bad iterator. iter: " << position << " index: " << target_index << "\n");
+
+                if(m_size > 0)
+                {
+                    for(int64_t i = static_cast<int64_t>(m_size) - 1; i >= static_cast<int64_t>(target_index); --i)
+                    {
+                        (*this)[static_cast<size_type>(i + 1)] = std::move((*this)[static_cast<size_type>(i)]);
+                    }
+                }
+
+                (*this)[target_index] = std::move(value);
+
+                ++m_size;
+                return begin() + target_index;
             }
             iterator erase(const_iterator position)
             {
@@ -417,10 +452,27 @@ namespace stc
 
                 return erase_start;
             }
-            void clear()
+            reference push_back(const value_type& new_entry)
             {
-                destroy();
-                m_size = 0;
+                size_t index = m_size++;
+                m_storage[index].set(new_entry);
+                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
+                return m_storage[index].get();
+            }
+            reference push_back(value_type&& new_entry)
+            {
+                size_t index = m_size++;
+                m_storage[index].set(std::forward<value_type>(new_entry));
+                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
+                return m_storage[index].get();
+            }
+            template <typename ...Args>
+            reference emplace_back(Args&&... args)
+            {
+                size_t index = m_size++;
+                m_storage[index].set(std::forward<Args>(args)...);
+                //ASSERT(m_size <= t_capacity, "adding entry to full static vector of size " << t_capacity << "\n");
+                return m_storage[index].get();
             }
             void pop_back()
             {
@@ -428,25 +480,6 @@ namespace stc
 
                 m_storage[m_size - 1].destroy();
                 --m_size;
-            }
-            iterator insert(const_iterator position, value_type value)
-            {
-                size_type target_index = position - begin();
-
-                //ASSERT(target_index <= m_size, "trying to insert out of bounds or with bad iterator. iter: " << position << " index: " << target_index << "\n");
-
-                if(m_size > 0)
-                {
-                    for(int64_t i = static_cast<int64_t>(m_size) - 1; i >= static_cast<int64_t>(target_index); --i)
-                    {
-                        (*this)[static_cast<size_type>(i + 1)] = std::move((*this)[static_cast<size_type>(i)]);
-                    }
-                }
-
-                (*this)[target_index] = std::move(value);
-
-                ++m_size;
-                return begin() + target_index;
             }
             void resize(size_type new_size)
             {
