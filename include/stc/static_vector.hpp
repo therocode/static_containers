@@ -415,12 +415,53 @@ namespace stc
                 ++m_size;
                 return position;
             }
-            iterator insert(const_iterator pos, size_type count, const value_type& value);;;;;;
+            iterator insert(const_iterator cposition, size_type count, const value_type& value)
+            {
+                size_t end_index = m_size + count;
+
+                for(size_type i = m_size; i < end_index; ++i)
+                {
+                    m_storage[i].set(value);
+                }
+
+                iterator position = non_const(cposition);
+                move_segment_up(position, end(), position + count);
+
+                m_size += count;
+                return position;
+            }
             template <typename input_iter, typename std::enable_if_t<is_input_iterator_v<input_iter>>* = nullptr>
-            iterator insert(const_iterator pos, input_iter first, input_iter last);;;;;;
-            iterator insert(const_iterator pos, std::initializer_list<value_type> ilist);;;;;;
+            iterator insert(const_iterator cposition, input_iter first, input_iter last)
+            {
+                auto current = first;
+                size_type i = m_size;
+                for(; current != last; ++i, ++current)
+                {
+                    m_storage[i].set(*current);
+                }
+                size_type count = i - m_size;
+
+                iterator position = non_const(cposition);
+                move_segment_up(position, end(), position + count);
+
+                m_size += count;
+                return position;
+            }
+            iterator insert(const_iterator cposition, std::initializer_list<value_type> ilist)
+            {
+                return insert(cposition, ilist.begin(), ilist.end());
+            }
             template <typename... Args>
-            iterator emplace(const_iterator pos, Args&&... args);;;;;;
+            iterator emplace(const_iterator cposition, Args&&... args)
+            {
+                m_storage[m_size].set(std::forward<Args...>(args)...);
+
+                iterator position = non_const(cposition);
+                move_segment_up(position, end(), position + 1);
+
+                ++m_size;
+                return position;
+            }
             iterator erase(const_iterator cposition)
             {
                 //size_type index = index_of(cposition);
