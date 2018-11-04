@@ -4,6 +4,40 @@
 
 namespace stc
 {
+    template<typename T>
+    struct is_input_iterator
+    {
+        private:
+            typedef std::true_type yes;
+            typedef std::false_type no;
+    
+            template<typename U>
+            static auto can_increment(int) -> decltype(++std::declval<U&>() == std::declval<U&>(), yes());
+            template<typename>
+            static no can_increment(...);
+    
+            template<typename U>
+            static auto can_inequality_compare(int) -> decltype(std::declval<U&>() != std::declval<U&>(), yes());
+            template<typename>
+            static no can_inequality_compare(...);
+    
+            template<typename U>
+            static auto can_dereference(int) -> decltype(*std::declval<U&>(), yes());
+            template<typename>
+            static no can_dereference(...);
+    
+        public:
+    
+            static constexpr bool value =
+                std::is_same_v<decltype(can_increment<T>(0)), yes> &&
+                std::is_same_v<decltype(can_inequality_compare<T>(0)), yes> &&
+                std::is_same_v<decltype(can_dereference<T>(0)), yes>;
+    };
+    
+    template <typename T>
+    inline constexpr bool is_input_iterator_v = is_input_iterator<T>::value;
+
+
     template <typename value_type_in>
     struct container_storage
     {

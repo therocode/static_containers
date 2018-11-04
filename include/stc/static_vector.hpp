@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <array>
 #include <iterator>
-#include <stc/container_storage.hpp>
+#include <stc/common.hpp>
 
 namespace stc
 {
@@ -174,15 +174,6 @@ namespace stc
                 for(const_reference item : other)
                     emplace_back(item);
             }
-            static_vector& operator=(const static_vector& other)
-            {
-                clear();
-
-                for(const_reference item : other)
-                    emplace_back(item);
-
-                return *this;
-            }
             static_vector(static_vector&& other)
             {
                 clear();
@@ -192,18 +183,7 @@ namespace stc
 
                 other.clear();
             }
-            static_vector& operator=(static_vector&& other)
-            {
-                clear();
-
-                for(reference item : other)
-                    emplace_back(std::move(item));
-
-                other.clear();
-
-                return *this;
-            }
-            static_vector(size_type size):
+            explicit static_vector(size_type size):
                 m_size(size)
             {
             }
@@ -225,6 +205,89 @@ namespace stc
             {
                 for(size_type i = 0; i < size; ++i)
                     m_storage[i].set(std::forward<value_type>(arr[i]));
+            }
+
+            template<typename input_iter, typename std::enable_if_t<is_input_iterator_v<input_iter>>* = nullptr>
+            static_vector(input_iter start, input_iter end):
+                m_size(0)
+            {
+                for(auto current = start; current != end; ++current)
+                    push_back(*current);
+            }
+            static_vector& operator=(const static_vector& other)
+            {
+                clear();
+
+                for(const_reference item : other)
+                    emplace_back(item);
+
+                return *this;
+            }
+            static_vector& operator=(static_vector&& other)
+            {
+                clear();
+
+                for(reference item : other)
+                    emplace_back(std::move(item));
+
+                other.clear();
+
+                return *this;
+            }
+            static_vector& operator=(std::initializer_list<value_type> data)
+            {
+                destroy();
+
+                m_size = data.size();
+
+                for(size_type i = 0; i < m_size; ++i)
+                    m_storage[i].set(*(data.begin() + i));
+
+                return *this;
+            }
+            void assign(size_type count, const value_type& value)
+            {
+                destroy();
+
+                m_size = count;
+
+                for(size_type i = 0; i < m_size; ++i)
+                    m_storage[i].set(value);
+            }
+            template<typename input_iter, typename std::enable_if_t<is_input_iterator_v<input_iter>>* = nullptr>
+            void assign(input_iter start, input_iter end)
+            {
+                clear();
+
+                for(auto current = start; current != end; ++current)
+                    push_back(*current);
+            }
+            void assign(std::initializer_list<value_type> data)
+            {
+                destroy();
+
+                m_size = data.size();
+
+                for(size_type i = 0; i < m_size; ++i)
+                    m_storage[i].set(*(data.begin() + i));
+            }
+            reference at(size_type index)
+            {
+                //bounds checking tbi
+                return (*this)[index];
+            }
+            const_reference at(size_type index) const
+            {
+                //bounds checking tbi
+                return (*this)[index];
+            }
+            value_type* data() noexcept
+            {
+                return &(*this)[0];
+            }
+            const value_type* data() const noexcept
+            {
+                return &(*this)[0];
             }
             reference push_back(const value_type& new_entry)
             {
@@ -292,6 +355,10 @@ namespace stc
             {
                 return iterator{m_storage.data()};
             }
+            const_iterator cbegin() const
+            {
+                return const_iterator{m_storage.data()};
+            }
             const_iterator end() const
             {
                 return begin() + m_size;
@@ -299,6 +366,14 @@ namespace stc
             iterator end()
             {
                 return begin() + m_size;
+            }
+            const_iterator cend() const
+            {
+                return begin() + m_size;
+            }
+            constexpr size_type max_size() const
+            {
+                return static_cast<size_type>(-1) / sizeof(value_type);
             }
             iterator erase(const_iterator position)
             {
