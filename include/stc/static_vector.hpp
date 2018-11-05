@@ -186,10 +186,8 @@ namespace stc
                 for(const_reference item : other)
                     emplace_back(item);
             }
-            static_vector(static_vector&& other)
+            static_vector(static_vector&& other): m_size(0)
             {
-                clear();
-
                 for(reference item : other)
                     emplace_back(std::move(item));
 
