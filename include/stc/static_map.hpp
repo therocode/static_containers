@@ -46,7 +46,7 @@ class static_map
 
             value_type& operator *() const
             {
-                return **target;
+                return target->get();
             }
 
             value_type* operator->() const
