@@ -171,6 +171,20 @@ TEST_CASE("static_vector(static_vector&& other)", "[static_vector]")
         verify_contains(source, {});
     });
 }
+
+TEST_CASE("static_vector(std::initializer_list<value_type> data)", "[static_vector]")
+{
+    using probe = pr::probe_t<int>;
+    no_leak_verifier<probe> no_leak;
+    
+    verify_semantics<probe>(semantics_flags::None, []()
+    {
+        stc::static_vector<probe, 5> numbers({1, 3, 3, 7});
+
+        verify_contains(numbers, {1, 3, 3, 7});
+    });
+}
+
 //TEST_CASE("static_vector can be created filled with a size", "[containers]")
 //{
 //    stc::static_vector<int, 100> numbers(3, 1);
