@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <cstdint>
 #include <array>
+#include <limits>
 #include <iterator>
 #include <stc/common.hpp>
 
@@ -279,12 +280,18 @@ namespace stc
             //element access
             reference at(size_type index)
             {
-                //bounds checking tbi
+                if(index >= m_size)
+                {
+                    throw std::out_of_range("accessing out of static_vector bounds");
+                }
                 return (*this)[index];
             }
             const_reference at(size_type index) const
             {
-                //bounds checking tbi
+                if(index >= m_size)
+                {
+                    throw std::out_of_range("accessing out of static_vector bounds");
+                }
                 return (*this)[index];
             }
             reference operator[](size_type index)
@@ -379,7 +386,7 @@ namespace stc
             }
             constexpr size_type max_size() const
             {
-                return static_cast<size_type>(-1) / sizeof(value_type);
+                return std::numeric_limits<size_type>::max() / static_cast<size_type>(sizeof(value_type));
             }
             constexpr static size_type capacity()
             {
@@ -575,11 +582,20 @@ namespace stc
     };
 
     template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
-    bool operator==(static_vector<t_data, t_a_capacity> a, static_vector<t_data, t_b_capacity>)
+    bool operator==(static_vector<t_data, t_a_capacity> a, static_vector<t_data, t_b_capacity> b)
     {
-        return false;
-        //size_type a_size = a.size();
-        //size_type b_size = b.size();
-        //if(t_a_capacity <`
+        size_t a_size = a.size();
+        size_t b_size = b.size();
+
+        if(a_size != b_size)
+            return false;
+
+        for(size_t i = 0; i < a_size; ++i)
+        {
+            if(!(a[i] == b[i]))
+                return false;
+        }
+
+        return true;
     }
 }

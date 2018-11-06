@@ -164,6 +164,15 @@ class probe_t
         s_total() = {};
         s_last() = {};
     }
+    static void reset_counts()
+    {
+        s_total() = {};
+        s_last() = {};
+    }
+    static void reset_state()
+    {
+        s_state() = {};
+    }
     static probe_state state()
     {
         return s_state();

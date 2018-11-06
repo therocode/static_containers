@@ -1,37 +1,5 @@
-#include <catch/catch.hpp>
-#include <probe/probe.hpp>
+#include "common.hpp"
 #include <stc/static_vector.hpp>
-
-#include <iostream>
-
-namespace semantics_flags
-{
-    using type = int;
-    constexpr type None = 0;
-    constexpr type NoLeaks = 1;
-    constexpr type NoConstruct = 1 << 1;
-    constexpr type NoCopy = 1 << 2;
-    constexpr type NoMove = 1 << 3;
-}
-
-template <typename probe, typename functor>
-void verify_semantics(semantics_flags::type flags, functor f)
-{
-    probe::reset();
-
-    f();
-
-    auto counts = probe::last();
-
-    if(flags & semantics_flags::NoLeaks)
-        REQUIRE(probe::clean());
-    if(flags & semantics_flags::NoConstruct)
-        REQUIRE((counts.defco == 0 && counts.valco == 0 && counts.movco == 0 && counts.copco == 0));
-    if(flags & semantics_flags::NoCopy)
-        REQUIRE(counts.copies == 0);
-    if(flags & semantics_flags::NoMove)
-        REQUIRE(counts.moves == 0);
-}
 
 template <typename probe_type, size_t capacity>
 void verify_contains(stc::static_vector<probe_type, capacity>& v, std::initializer_list<typename probe_type::value_type> contents)
@@ -41,40 +9,35 @@ void verify_contains(stc::static_vector<probe_type, capacity>& v, std::initializ
     size_t contents_size = contents.size();
     bool empty = contents_size == 0;
 
+    REQUIRE(v.size() == contents_size);
+
     size_t i = 0;
     for(const auto& item : contents)
     {
-        REQUIRE(v[i] == item);
-        REQUIRE(cv[i] == item);
-        REQUIRE(v.at(i) == item);
-        REQUIRE(cv.at(i) == item);
+        CHECK(v[i] == item);
+        CHECK(cv[i] == item);
+        CHECK(v.at(i) == item);
+        CHECK(cv.at(i) == item);
         ++i;
     }
-    REQUIRE_THROWS(v.at(i));
-    REQUIRE_THROWS(cv.at(i));
+    CHECK_THROWS(v.at(i));
+    CHECK_THROWS(cv.at(i));
 
     if(!empty)
     {
         const auto& first_item = *contents.begin();
         const auto& last_item = *(contents.begin() + contents_size - 1);
 
-        REQUIRE(v.front() == first_item);
-        REQUIRE(cv.front() == first_item);
-        REQUIRE(v.back() == last_item);
-        REQUIRE(cv.back() == last_item);
-    }
-    else
-    {
-        REQUIRE_THROWS(v.front());
-        REQUIRE_THROWS(cv.front());
-        REQUIRE_THROWS(v.back());
-        REQUIRE_THROWS(cv.back());
+        CHECK(v.front() == first_item);
+        CHECK(cv.front() == first_item);
+        CHECK(v.back() == last_item);
+        CHECK(cv.back() == last_item);
     }
 
     if(!empty)
     {
-        REQUIRE(v.data() == &v[0]);
-        REQUIRE(cv.data() == &cv[0]);
+        CHECK(v.data() == &v[0]);
+        CHECK(cv.data() == &cv[0]);
     }
 
     auto verify_increment_iteration = [] (auto v_begin, auto v_end, auto contents_begin, auto contents_end)
@@ -83,7 +46,7 @@ void verify_contains(stc::static_vector<probe_type, capacity>& v, std::initializ
         auto contents_current = contents_begin;
         while(v_current != v_end)
         {
-            REQUIRE(*v_current == *contents_current);
+            CHECK(*v_current == *contents_current);
             ++v_current;
             ++contents_current;
         }
@@ -92,7 +55,7 @@ void verify_contains(stc::static_vector<probe_type, capacity>& v, std::initializ
     {
         for(size_t i = 0; i < count; ++i)
         {
-            REQUIRE(*(v_begin + i) == *(contents_begin + i));
+            CHECK(*(v_begin + i) == *(contents_begin + i));
         }
     };
 
@@ -106,112 +69,101 @@ void verify_contains(stc::static_vector<probe_type, capacity>& v, std::initializ
     verify_random_access_iteration(v.rbegin(), std::rbegin(contents), contents_size);
     verify_random_access_iteration(v.crbegin(), std::rbegin(contents), contents_size);
 
-    REQUIRE(v.begin() + contents_size == v.end());
-    REQUIRE(cv.begin() + contents_size == cv.end());
-    REQUIRE(v.cbegin() + contents_size == v.cend());
-    REQUIRE(v.rbegin() + contents_size == v.rend());
-    REQUIRE(cv.rbegin() + contents_size == cv.rend());
-    REQUIRE(v.crbegin() + contents_size == v.crend());
+    CHECK(v.begin() + contents_size == v.end());
+    CHECK(cv.begin() + contents_size == cv.end());
+    CHECK(v.cbegin() + contents_size == v.cend());
+    CHECK(v.rbegin() + contents_size == v.rend());
+    CHECK(cv.rbegin() + contents_size == cv.rend());
+    CHECK(v.crbegin() + contents_size == v.crend());
     
 
-    REQUIRE(v.empty() == empty);
-    REQUIRE(v.size() == contents_size);
-    REQUIRE(v.max_size() == std::vector<typename probe_type::value_type>().max_size());
-    REQUIRE(v.capacity() == capacity);
-    REQUIRE(v.full() == (contents_size == capacity));
-
-    stc::static_vector<probe_type, capacity> ideal_vec(contents.begin(), contents.end());
-    REQUIRE(v == ideal_vec);
+    CHECK(v.empty() == empty);
+    CHECK(v.max_size() == std::vector<probe_type>().max_size());
+    CHECK(v.capacity() == capacity);
+    CHECK(v.full() == (contents_size == capacity));
 }
 
 TEST_CASE("static_vector()", "[static_vector]")
 {
-    using probe = pr::probe_t<int>;probe::reset();
-    pr::probe_counts counts;
+    using probe = pr::probe_t<int>;
+    no_leak_verifier<probe> no_leak;
+    
+    verify_semantics<probe>(semantics_flags::NoConstruct, []()
     {
         stc::static_vector<probe, 100> numbers;
 
-        counts = probe::last();
-
-        REQUIRE(numbers.size() == 0);
-    }
-
-    REQUIRE(counts.defco == 0);
-    REQUIRE(probe::clean());
+        verify_contains(numbers, {});
+    });
 }
 
 TEST_CASE("explicit static_vector(size_type size, const value_type& data)", "[static_vector]")
 {
-    using probe = pr::probe_t<int>;probe::reset();
+    using probe = pr::probe_t<int>;
+    no_leak_verifier<probe> no_leak;
+    
+    verify_semantics<probe>(semantics_flags::NoMove, []()
     {
         int value = 3;
         size_t size = 5;
         stc::static_vector<probe, 100> numbers(size, value);
 
-        REQUIRE(numbers.size() == size);
-        REQUIRE(numbers[0] == value);
-        REQUIRE(numbers[size - 1] == value);
-    }
-
-    REQUIRE(probe::clean());
+        verify_contains(numbers, {3, 3, 3, 3, 3});
+    });
 }
 
 TEST_CASE("explicit static_vector(size_type size)", "[static_vector]")
 {
-    using probe = pr::probe_t<int>;probe::reset();
+    using probe = pr::probe_t<int>;
+    no_leak_verifier<probe> no_leak;
+    
+    verify_semantics<probe>(semantics_flags::NoCopy | semantics_flags::NoMove, []()
     {
         size_t size = 3;
         stc::static_vector<probe, 100> numbers(size);
 
-        REQUIRE(numbers.size() == size);
-        REQUIRE(numbers[0] == 0);
-        REQUIRE(numbers[size - 1] == 0);
-    }
-
-    REQUIRE(probe::clean());
+        verify_contains(numbers, {0, 0, 0});
+    });
 }
 
 TEST_CASE("static_vector(input_iter start, input_iter end)", "[static_vector]")
 {
-    using probe = pr::probe_t<int>;probe::reset();
+    using probe = pr::probe_t<int>;
+    no_leak_verifier<probe> no_leak;
+    
+    std::array<int, 5> source{4,3,2,1,0};
+
+    verify_semantics<probe>(semantics_flags::None, [&source]()
     {
-        std::array<int, 5> source{4,3,2,1,0};
+        stc::static_vector<probe, 5> numbers(source.begin(), source.end());
 
-        stc::static_vector<probe, 100> numbers(source.begin(), source.end());
-
-        REQUIRE(numbers.size() == source.size());
-        REQUIRE(numbers[0] == 4);
-        REQUIRE(numbers[1] == 3);
-        REQUIRE(numbers[2] == 2);
-        REQUIRE(numbers[3] == 1);
-        REQUIRE(numbers[4] == 0);
-    }
-
-    REQUIRE(probe::clean());
+        verify_contains(numbers, {4, 3, 2, 1, 0});
+    });
 }
 
 TEST_CASE("static_vector(const static_vector& other)", "[static_vector]")
 {
-    using probe = pr::probe_t<int>;probe::reset();
-    {
-        stc::static_vector<probe, 5> source{4,3,2};
+    using probe = pr::probe_t<int>;
+    no_leak_verifier<probe> no_leak;
+    
+    stc::static_vector<probe, 5> source{4,3,2};
 
+    verify_semantics<probe>(semantics_flags::None, [&source]()
+    {
         stc::static_vector<probe, 5> numbers(source);
 
         verify_contains(numbers, {4, 3, 2});
         REQUIRE(numbers == source);
-    }
-
-    REQUIRE(probe::clean());
+    });
 }
 
 TEST_CASE("static_vector(static_vector&& other)", "[static_vector]")
 {
     using probe = pr::probe_t<int>;
+    no_leak_verifier<probe> no_leak;
     
     stc::static_vector<probe, 5> source{4,3,2};
 
-    verify_semantics<probe>(semantics_flags::NoLeaks | semantics_flags::NoCopy, [&source]()
+    verify_semantics<probe>(semantics_flags::NoCopy, [&source]()
     {
         stc::static_vector<probe, 5> numbers(std::move(source));
 
