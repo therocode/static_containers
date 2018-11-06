@@ -62,7 +62,7 @@ namespace stc
                     return *this;
                 }
 
-                iterator_t operator+(difference_type diff)
+                iterator_t operator+(difference_type diff) const
                 {
                     iterator_t tmp = *this;
                     tmp.target += diff;
@@ -85,7 +85,7 @@ namespace stc
                     return target - iter.target;
                 }
 
-                iterator_t operator-(difference_type diff)
+                iterator_t operator-(difference_type diff) const
                 {
                     iterator_t tmp = *this;
                     tmp.target -= diff;
@@ -168,11 +168,17 @@ namespace stc
                 m_size(size)
             {
                 for(size_type i = 0; i < m_size; ++i)
-                    (*this)[i] = data;
+                {
+                    m_storage[i].set(data);
+                }
             }
             explicit static_vector(size_type size):
                 m_size(size)
             {
+                for(size_type i = 0; i < m_size; ++i)
+                {
+                    m_storage[i].set();
+                }
             }
             template<typename input_iter, typename std::enable_if_t<is_input_iterator_v<input_iter>>* = nullptr>
             static_vector(input_iter start, input_iter end):
@@ -567,4 +573,13 @@ namespace stc
             std::array<storage_type, t_capacity> m_storage;
             size_type m_size;
     };
+
+    template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
+    bool operator==(static_vector<t_data, t_a_capacity> a, static_vector<t_data, t_b_capacity>)
+    {
+        return false;
+        //size_type a_size = a.size();
+        //size_type b_size = b.size();
+        //if(t_a_capacity <`
+    }
 }
