@@ -6,6 +6,7 @@
 #include <array>
 #include <limits>
 #include <iterator>
+#include <stdexcept>
 #include <stc/common.hpp>
 
 namespace stc
@@ -206,13 +207,14 @@ namespace stc
                 for(size_type i = 0; i < m_size; ++i)
                     m_storage[i].set(*(data.begin() + i));
             }
-            template <size_type size>
-            static_vector(value_type (&&arr)[size]):
-                m_size(arr.size())
-            {
-                for(size_type i = 0; i < size; ++i)
-                    m_storage[i].set(std::forward<value_type>(arr[i]));
-            }
+            //TBI with a struct tag to disambiguate from std::initializer_list constructor maybe
+            //template <size_type size>
+            //static_vector(value_type (&&arr)[size]):
+            //    m_size(arr.size())
+            //{
+            //    for(size_type i = 0; i < size; ++i)
+            //        m_storage[i].set(std::forward<value_type>(arr[i]));
+            //}
             //destructor
             ~static_vector()
             {
@@ -263,10 +265,15 @@ namespace stc
             template<typename input_iter, typename std::enable_if_t<is_input_iterator_v<input_iter>>* = nullptr>
             void assign(input_iter start, input_iter end)
             {
-                clear();
+                destroy();
 
-                for(auto current = start; current != end; ++current)
-                    push_back(*current);
+                size_type i = 0;
+                for(auto current = start; current != end; ++current, ++i)
+                {
+                    m_storage[i].set(*current);
+                }
+
+                m_size = i;
             }
             void assign(std::initializer_list<value_type> data)
             {
@@ -274,8 +281,9 @@ namespace stc
 
                 m_size = data.size();
 
-                for(size_type i = 0; i < m_size; ++i)
-                    m_storage[i].set(*(data.begin() + i));
+                auto current = data.begin();
+                for(size_type i = 0; i < m_size; ++i, ++current)
+                    m_storage[i].set(*current);
             }
             //element access
             reference at(size_type index)
@@ -409,7 +417,7 @@ namespace stc
                 m_storage[m_size].set(value);
 
                 iterator position = non_const(cposition);
-                move_segment_up(position, end(), position + 1);
+                move_segment_down(end(), end() + 1, position);
 
                 ++m_size;
                 return position;
@@ -421,7 +429,7 @@ namespace stc
                 m_storage[m_size].set(std::forward<value_type>(value));
 
                 iterator position = non_const(cposition);
-                move_segment_up(position, end(), position + 1);
+                move_segment_down(end(), end() + 1, position);
 
                 ++m_size;
                 return position;
@@ -436,7 +444,7 @@ namespace stc
                 }
 
                 iterator position = non_const(cposition);
-                move_segment_up(position, end(), position + count);
+                move_segment_down(end(), end() + count, position);
 
                 m_size += count;
                 return position;
@@ -453,7 +461,7 @@ namespace stc
                 size_type count = i - m_size;
 
                 iterator position = non_const(cposition);
-                move_segment_up(position, end(), position + count);
+                move_segment_down(end(), end() + count, position);
 
                 m_size += count;
                 return position;
@@ -468,7 +476,7 @@ namespace stc
                 m_storage[m_size].set(std::forward<Args...>(args)...);
 
                 iterator position = non_const(cposition);
-                move_segment_up(position, end(), position + 1);
+                move_segment_down(end(), end() + 1, position);
 
                 ++m_size;
                 return position;
@@ -492,12 +500,12 @@ namespace stc
                 iterator erase_end = non_const(cerase_end);
                 size_type erase_count = erase_end - erase_start;
 
-                move_segment_down(erase_start + erase_count, end(), erase_start);
+                std::rotate(erase_start, erase_start + erase_count, end());
 
                 m_size -= erase_count;
 
-                size_type storage_size = m_storage.size();
-                for(size_type i = m_size; i < storage_size; ++i)
+                size_type end_index = m_size + erase_count;
+                for(size_type i = m_size; i < end_index; ++i)
                 {
                     m_storage[i].destroy();
                 }
@@ -542,6 +550,28 @@ namespace stc
                     for(size_type i = first_erase; i < m_size; ++i)
                         m_storage[i].destroy();
                 }
+                else
+                {
+                    for(size_type i = m_size; i < new_size; ++i)
+                        m_storage[i].set();
+                }
+
+                m_size = new_size;
+            }
+            void resize(size_type new_size, const value_type& value)
+            {
+                if(new_size < m_size)
+                {
+                    size_type first_erase = new_size;
+
+                    for(size_type i = first_erase; i < m_size; ++i)
+                        m_storage[i].destroy();
+                }
+                else
+                {
+                    for(size_type i = m_size; i < new_size; ++i)
+                        m_storage[i].set(value);
+                }
 
                 m_size = new_size;
             }
@@ -562,19 +592,7 @@ namespace stc
             }
             void move_segment_down(iterator start, iterator end, iterator destination)
             {
-                for(iterator current_source = start, current_destination = destination; current_source != end; ++current_source, ++current_destination)
-                {
-                    std::swap(*current_destination, *current_source);
-                }
-            }
-            void move_segment_up(iterator start, iterator end, iterator destination)
-            {
-                size_type count = end - start;
-                reverse_iterator rend(start);
-                for(reverse_iterator current_source = reverse_iterator{end}, current_destination = reverse_iterator{destination + count}; current_source != rend; ++current_source, ++current_destination)
-                {
-                    std::swap(*current_destination, *current_source);
-                }
+                std::rotate(destination, start, end);
             }
 
             std::array<storage_type, t_capacity> m_storage;
