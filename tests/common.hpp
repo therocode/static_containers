@@ -21,7 +21,12 @@ void verify_semantics(semantics_flags::type flags, functor f)
     auto counts = probe::last();
 
     if(flags & semantics_flags::NoConstruct)
-        REQUIRE((counts.defco == 0 && counts.valco == 0 && counts.movco == 0 && counts.copco == 0));
+    {
+        REQUIRE(counts.defco == 0);
+        REQUIRE(counts.valco == 0);
+        REQUIRE(counts.copco == 0);
+        REQUIRE(counts.movco == 0);
+    }
     if(flags & semantics_flags::NoCopy)
         REQUIRE(counts.copies == 0);
     if(flags & semantics_flags::NoMove)
