@@ -1,12 +1,13 @@
 #pragma once
-#include <cstddef>
-#include <utility>
-#include <type_traits>
-#include <cstdint>
+#include <algorithm>
 #include <array>
-#include <limits>
+#include <cstddef>
+#include <cstdint>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
+#include <type_traits>
+#include <utility>
 #include <stc/common.hpp>
 
 namespace stc
