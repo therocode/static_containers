@@ -1,15 +1,18 @@
 #pragma once
 #include <catch/catch.hpp>
 #include <probe/probe.hpp>
+#include <flg/flags.hpp>
 
 namespace semantics_flags
 {
-    using type = int;
-    constexpr type None = 0;
-    constexpr type NoConstruct = 1 << 0;
-    constexpr type NoCopy = 1 << 1;
-    constexpr type NoMove = 1 << 2;
-}
+    struct semantics_flags_tag{};
+    using type = flg::flag<int, semantics_flags_tag>::type;
+
+    constexpr type None        = type::none_flag();
+    constexpr type NoConstruct = type::from_index(0);
+    constexpr type NoCopy      = type::from_index(1);
+    constexpr type NoMove      = type::from_index(2);
+};
 
 template <typename probe, typename functor>
 void verify_semantics(semantics_flags::type flags, functor f)
