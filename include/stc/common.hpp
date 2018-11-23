@@ -109,17 +109,7 @@ namespace stc
         }
         optional_container_storage& operator=(const optional_container_storage& other)
         {
-            if(&other == this)
-                return *this;
-
-            if(has_value)
-                value.destroy();
-            
-            has_value = other.has_value;
-
-            if(other.has_value)
-                value.set(other.get());
-
+            set(other);
             return *this;
         }
         optional_container_storage(optional_container_storage&& other)
@@ -135,18 +125,7 @@ namespace stc
         }
         optional_container_storage& operator=(optional_container_storage&& other)
         {
-            if(has_value)
-                value.destroy();
-            
-            has_value = other.has_value;
-
-            if(other.has_value)
-            {
-                value.set(std::move(other.get()));
-                other.value.destroy();
-                other.has_value = false;
-            }
-
+            set(std::move(other));
             return *this;
         }
 
@@ -162,18 +141,37 @@ namespace stc
 
         void set(value_type&& v)
         {
-            *this = optional_container_storage(std::forward<value_type>(v));
+            if(has_value)
+                value.destroy();
+            
+            has_value = v.has_value;
+
+            if(v.has_value)
+            {
+                value.set(std::move(v.get()));
+                v.value.destroy();
+                v.has_value = false;
+            }
         }
 
         void set(const value_type& v)
         {
-            *this = optional_container_storage(std::forward<value_type>(v));
+            if(&v == this)
+                return;
+
+            if(has_value)
+                value.destroy();
+            
+            has_value = v.has_value;
+
+            if(v.has_value)
+                value.set(v.get());
         }
 
         template<typename ...Args>
         void set(Args&&... args) 
         {
-            *this = optional_container_storage(std::forward<Args>(args)...);
+            set(optional_container_storage(std::forward<Args>(args)...));
         }
 
         container_storage<value_type> value;
