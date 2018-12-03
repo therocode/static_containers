@@ -86,14 +86,14 @@ namespace stc
         optional_container_storage(): has_value(false) {}
         optional_container_storage(value_type&& v): has_value(true)
         {
-            value.set(std::forward<value_type>(v));
+            value.set(std::move(v));
         }
         optional_container_storage(const value_type& v): has_value(true)
         {
             value.set(v);
         }
         template <typename ...Args>
-        optional_container_storage(Args&&... args)
+        optional_container_storage(Args&&... args): has_value(true)
         {
             value.set(std::forward<Args>(args)...);
         }
@@ -102,30 +102,44 @@ namespace stc
             if(has_value)
                 value.destroy();
         }
-        optional_container_storage(const optional_container_storage& other): has_value(other.has_value)
+        optional_container_storage(const optional_container_storage& other)
         {
-            if(other.has_value)
-                value.set(other.get());
+            *this = other;
         }
         optional_container_storage& operator=(const optional_container_storage& other)
         {
-            set(other);
+            if(&other == this)
+                return *this;
+
+            if(has_value)
+                value.destroy();
+            
+            has_value = other.has_value;
+            if(other.has_value)
+            {
+                value = other.value;
+            }
+
             return *this;
         }
         optional_container_storage(optional_container_storage&& other)
         {
+            *this = std::move(other);
+        }
+        optional_container_storage& operator=(optional_container_storage&& other)
+        {
+            if(has_value)
+                value.destroy();
+            
             has_value = other.has_value;
 
             if(other.has_value)
             {
-                value.set(std::move(other.get()));
+                value = std::move(other.value);
                 other.value.destroy();
                 other.has_value = false;
             }
-        }
-        optional_container_storage& operator=(optional_container_storage&& other)
-        {
-            set(std::move(other));
+
             return *this;
         }
 
@@ -137,41 +151,6 @@ namespace stc
         const value_type& get() const
         {
             return value.get();
-        }
-
-        void set(value_type&& v)
-        {
-            if(has_value)
-                value.destroy();
-            
-            has_value = v.has_value;
-
-            if(v.has_value)
-            {
-                value.set(std::move(v.get()));
-                v.value.destroy();
-                v.has_value = false;
-            }
-        }
-
-        void set(const value_type& v)
-        {
-            if(&v == this)
-                return;
-
-            if(has_value)
-                value.destroy();
-            
-            has_value = v.has_value;
-
-            if(v.has_value)
-                value.set(v.get());
-        }
-
-        template<typename ...Args>
-        void set(Args&&... args) 
-        {
-            set(optional_container_storage(std::forward<Args>(args)...));
         }
 
         container_storage<value_type> value;
