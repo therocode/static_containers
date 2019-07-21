@@ -220,8 +220,8 @@ class static_map
         iterator begin()
         {
             iterator result;
-            result.target = m_storage.end();
-            result.end = m_storage.end();
+            result.target = m_storage.data() + m_storage.size();
+            result.end = m_storage.data() + m_storage.size();
 
             for(auto& entry : m_storage)
             {
@@ -244,8 +244,8 @@ class static_map
         iterator end()
         {
             iterator result;
-            result.target = m_storage.end();
-            result.end = m_storage.end();
+            result.target = m_storage.data() + m_storage.size();
+            result.end = m_storage.data() + m_storage.size();
 
             return result;
         }
