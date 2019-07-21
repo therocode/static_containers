@@ -22,5 +22,5 @@ install(
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/static_containers)
 
 install(
-    FILES    static_containers/include/stc/common.hpp    static_containers/include/stc/static_map.hpp    static_containers/include/stc/static_vector.hpp
+    FILES    include/stc/common.hpp    include/stc/static_map.hpp    include/stc/static_vector.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stc)
