@@ -96,7 +96,7 @@ class static_map
                     slot_type& slot = m_storage[target];
                     slot = slot_type{std::move(entry)};
                     ++m_size;
-                    return {{&slot, &(*m_storage.end())}, true};
+                    return { {&slot, m_storage.data() + m_storage.size()}, true };
                 }
                 else
                 {
