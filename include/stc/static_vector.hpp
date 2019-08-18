@@ -601,7 +601,7 @@ namespace stc
     };
 
     template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
-    bool operator==(static_vector<t_data, t_a_capacity> a, static_vector<t_data, t_b_capacity> b)
+    bool operator==(const static_vector<t_data, t_a_capacity>& a, const static_vector<t_data, t_b_capacity>& b)
     {
         size_t a_size = a.size();
         size_t b_size = b.size();
@@ -616,5 +616,47 @@ namespace stc
         }
 
         return true;
+    }
+
+    template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
+    bool operator!=(const static_vector<t_data, t_a_capacity>& a, const static_vector<t_data, t_b_capacity>& b)
+    {
+        return !(a == b);
+    }
+
+    template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
+    bool operator<(const static_vector<t_data, t_a_capacity>& a, const static_vector<t_data, t_b_capacity>& b)
+    {
+        size_t a_size = a.size();
+        size_t b_size = b.size();
+
+        if(a_size != b_size)
+            return a_size < b_size;
+
+        for(size_t i = 0; i < a_size; ++i)
+        {
+            if(!(a[i] == b[i]))
+                return a[i] < b[i];
+        }
+
+        return true;
+    }
+
+    template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
+    bool operator>(const static_vector<t_data, t_a_capacity>& a, const static_vector<t_data, t_b_capacity>& b)
+    {
+        return !(a == b || a < b);
+    }
+
+    template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
+    bool operator>=(const static_vector<t_data, t_a_capacity>& a, const static_vector<t_data, t_b_capacity>& b)
+    {
+        return (a == b || a > b);
+    }
+
+    template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
+    bool operator<=(const static_vector<t_data, t_a_capacity>& a, const static_vector<t_data, t_b_capacity>& b)
+    {
+        return (a == b || a < b);
     }
 }

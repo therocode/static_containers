@@ -102,7 +102,7 @@ namespace stc
             if(has_value)
                 value.destroy();
         }
-        optional_container_storage(const optional_container_storage& other)
+        optional_container_storage(const optional_container_storage& other): has_value(false)
         {
             *this = other;
         }
@@ -122,7 +122,7 @@ namespace stc
 
             return *this;
         }
-        optional_container_storage(optional_container_storage&& other)
+        optional_container_storage(optional_container_storage&& other): has_value(false)
         {
             *this = std::move(other);
         }
