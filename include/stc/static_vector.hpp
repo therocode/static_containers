@@ -639,7 +639,7 @@ namespace stc
                 return a[i] < b[i];
         }
 
-        return true;
+        return false;
     }
 
     template <typename t_data, size_t t_a_capacity, size_t t_b_capacity>
